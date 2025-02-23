@@ -1,330 +1,322 @@
-"use client";
-import React, { useState } from "react";
-import axios from "axios";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { motion } from "framer-motion";
-import { useMutation } from "@tanstack/react-query";
+import { useState } from 'react';
+import axios from 'axios';
+import { useMutation } from '@tanstack/react-query';
+import { z } from 'zod';
 
-const submitRegistration = async (formData: any) => {
-    try {
-      const response = await axios.post("http://localhost:3000/register", {
-        utilisateur: {
-          email: formData.email,
-          password: formData.password,
-          nom: formData.nom,
-          prenom: formData.prenom,
-          telephone: formData.telephone,
-        },
-        adresse: {
-          num_street: formData.num_street,
-          street: formData.street,
-          city: formData.city,
-          postal_code: formData.postal_code,
-          country: formData.country,
-          longitude: formData.longitude,
-          latitude: formData.latitude,
-        },
-        pharmacien: {
-          cartePro: formData.cartePro,
-          diplome: formData.diplome,
-          assurancePro: formData.assurancePro,
-        },
-        pharmacie: {
-          nomp: formData.nomp,
-          docPermis: formData.docPermis,
-          docAutorisation: formData.docAutorisation,
-        },
-      }, {
-        withCredentials: true, // Ajouter ceci si tu veux envoyer des cookies ou des en-têtes d'authentification
-      });
-  
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error?.response?.data?.message || "Une erreur est survenue");
-    }
+type FormData = {
+  utilisateur: {
+    email: string;
+    password: string;
+    nom: string;
+    prenom: string;
+    telephone: string;
+    role: string;
   };
-  
-export default function Signup() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    nom: "",
-    prenom: "",
-    email: "",
-    password: "",
-    telephone: "",
-    num_street: "",
-    street: "",
-    city: "",
-    postal_code: "",
-    country: "",
-    longitude: "",
-    latitude: "",
-    cartePro: "",
-    diplome: "",
-    assurancePro: "",
-    nomp: "",
-    docPermis: "",
-    docAutorisation: "",
-  });
+  adresse: {
+    num_street: string;
+    street: string;
+    city: string;
+    postal_code: string;
+    country: string;
+    longitude: string;
+    latitude: string;
+  };
+  pharmacien: {
+    cartePro: string;
+    diplome: string;
+  };
+  pharmacie: {
+    nom: string;
+    docPermis: string;
+    docAutorisation: string;
+  };
+};
 
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+const initialFormData: FormData = {
+  utilisateur: {
+    email: '',
+    password: '',
+    nom: '',
+    prenom: '',
+    telephone: '',
+    role: 'utilisateur',
+  },
+  adresse: {
+    num_street: '',
+    street: '',
+    city: '',
+    postal_code: '',
+    country: '',
+    longitude: '',
+    latitude: '',
+  },
+  pharmacien: {
+    cartePro: '',
+    diplome: '',
+  },
+  pharmacie: {
+    nom: '',
+    docPermis: '',
+    docAutorisation: '',
+  },
+};
 
-  // Utilisation de TanStack Query pour la soumission du formulaire
-  const { mutateAsync: register, status, error } = useMutation<any, Error, typeof formData>({
-    mutationFn: submitRegistration,
-    onSuccess: (data: any) => {
-      setSuccessMessage(data.message);
-      setErrorMessage(""); // Efface les erreurs précédentes
+const signupSchema = z.object({
+  utilisateur: z.object({
+    email: z.string().email(),
+    password: z.string().min(6),
+    nom: z.string().min(1),
+    prenom: z.string().min(1),
+    telephone: z.string().min(10),
+    role: z.enum(['utilisateur', 'pharmacien']),
+  }),
+  adresse: z.object({
+    num_street: z.string().min(1),
+    street: z.string().min(1),
+    city: z.string().min(1),
+    postal_code: z.string().min(1),
+    country: z.string().min(1),
+    longitude: z.string().optional(),
+    latitude: z.string().optional(),
+  }),
+  pharmacien: z.object({
+    cartePro: z.string().optional(),
+    diplome: z.string().optional(),
+  }),
+  pharmacie: z.object({
+    nom: z.string().min(1),
+    docPermis: z.string().optional(),
+    docAutorisation: z.string().optional(),
+  }),
+});
+
+const SignupForm = () => {
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const [section, field] = name.split('.');
+    setFormData((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section as keyof FormData],
+        [field]: value,
+      },
+    }));
+  };
+
+  const { mutate, status, isError, error, isSuccess } = useMutation({
+    mutationFn: async (data: FormData) => {
+      const response = await axios.post('http://localhost:3000/register', data);
+      return response.data;
     },
     onError: (err) => {
-      setErrorMessage(err.message || "Une erreur s'est produite");
-      setSuccessMessage(""); // Efface les messages de succès précédents
+      console.error('Error:', err);
+    },
+    onSuccess: (data) => {
+      console.log('User registered successfully', data);
     },
   });
-
-  const handleChange = (e: any) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleNextStep = () => {
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handlePreviousStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationErrors([]);
+
     try {
-      await register(formData); // Lancer la mutation
-    } catch (error) {
-      // Les erreurs sont gérées par onError de useMutation
+      signupSchema.parse(formData);
+      mutate(formData);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        setValidationErrors(err.errors.map((error) => error.message));
+      }
     }
   };
 
-  const renderStep1 = () => (
-    <div className="space-y-2">
-      <Label htmlFor="nom">Nom</Label>
-      <Input
-        id="nom"
-        type="text"
-        name="nom"
-        value={formData.nom}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="prenom">Prénom</Label>
-      <Input
-        id="prenom"
-        type="text"
-        name="prenom"
-        value={formData.prenom}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="email">Email</Label>
-      <Input
-        id="email"
-        type="email"
-        name="email"
-        value={formData.email}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="password">Mot de passe</Label>
-      <Input
-        id="password"
-        type="password"
-        name="password"
-        value={formData.password}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="telephone">Téléphone</Label>
-      <Input
-        id="telephone"
-        type="text"
-        name="telephone"
-        value={formData.telephone}
-        onChange={handleChange}
-        required
-      />
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div className="space-y-2">
-      <Label htmlFor="num_street">Numéro de rue</Label>
-      <Input
-        id="num_street"
-        type="text"
-        name="num_street"
-        value={formData.num_street}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="street">Rue</Label>
-      <Input
-        id="street"
-        type="text"
-        name="street"
-        value={formData.street}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="city">Ville</Label>
-      <Input
-        id="city"
-        type="text"
-        name="city"
-        value={formData.city}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="postal_code">Code postal</Label>
-      <Input
-        id="postal_code"
-        type="text"
-        name="postal_code"
-        value={formData.postal_code}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="country">Pays</Label>
-      <Input
-        id="country"
-        type="text"
-        name="country"
-        value={formData.country}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="longitude">Longitude</Label>
-      <Input
-        id="longitude"
-        type="text"
-        name="longitude"
-        value={formData.longitude}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="latitude">Latitude</Label>
-      <Input
-        id="latitude"
-        type="text"
-        name="latitude"
-        value={formData.latitude}
-        onChange={handleChange}
-        required
-      />
-    </div>
-  );
-
-  const renderStep3 = () => (
-    <div className="space-y-2">
-      <Label htmlFor="cartePro">Carte Professionnelle</Label>
-      <Input
-        id="cartePro"
-        type="file"
-        name="cartePro"
-        value={formData.cartePro}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="diplome">Diplôme</Label>
-      <Input
-        id="diplome"
-        type="file"
-        name="diplome"
-        value={formData.diplome}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="assurancePro">Assurance Professionnelle</Label>
-      <Input
-        id="assurancePro"
-        type="file"
-        name="assurancePro"
-        value={formData.assurancePro}
-        onChange={handleChange}
-        required
-      />
-    </div>
-  );
-
-  const renderStep4 = () => (
-    <div className="space-y-2">
-      <Label htmlFor="nomp">Nom de la pharmacie</Label>
-      <Input
-        id="nomp"
-        type="text"
-        name="nomp"
-        value={formData.nomp}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="docPermis">Document Permis</Label>
-      <Input
-        id="docPermis"
-        type="file"
-        name="docPermis"
-        value={formData.docPermis}
-        onChange={handleChange}
-        required
-      />
-      <Label htmlFor="docAutorisation">Document Autorisation</Label>
-      <Input
-        id="docAutorisation"
-        type="file"
-        name="docAutorisation"
-        value={formData.docAutorisation}
-        onChange={handleChange}
-        required
-      />
-    </div>
-  );
-
   return (
-    <div className="h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-xl font-bold tracking-tighter">Inscription</h1>
-            <p className="text-muted-foreground">Remplissez les informations ci-dessous</p>
+    <form onSubmit={handleSubmit}>
+      <h1>Sign Up</h1>
+
+      {/* User Information */}
+      <div>
+        <label>Email</label>
+        <input
+          type="email"
+          name="utilisateur.email"
+          value={formData.utilisateur.email}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Password</label>
+        <input
+          type="password"
+          name="utilisateur.password"
+          value={formData.utilisateur.password}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Name</label>
+        <input
+          type="text"
+          name="utilisateur.nom"
+          value={formData.utilisateur.nom}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Surname</label>
+        <input
+          type="text"
+          name="utilisateur.prenom"
+          value={formData.utilisateur.prenom}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Phone</label>
+        <input
+          type="text"
+          name="utilisateur.telephone"
+          value={formData.utilisateur.telephone}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Role</label>
+        <select
+          name="utilisateur.role"
+          value={formData.utilisateur.role}
+          onChange={handleChange}
+        >
+          <option value="utilisateur">User</option>
+          <option value="pharmacien">Pharmacist</option>
+        </select>
+      </div>
+
+      {/* Address Information */}
+      <h2>Address Information</h2>
+      <div>
+        <label>Street Number</label>
+        <input
+          type="text"
+          name="adresse.num_street"
+          value={formData.adresse.num_street}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Street</label>
+        <input
+          type="text"
+          name="adresse.street"
+          value={formData.adresse.street}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>City</label>
+        <input
+          type="text"
+          name="adresse.city"
+          value={formData.adresse.city}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Postal Code</label>
+        <input
+          type="text"
+          name="adresse.postal_code"
+          value={formData.adresse.postal_code}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Country</label>
+        <input
+          type="text"
+          name="adresse.country"
+          value={formData.adresse.country}
+          onChange={handleChange}
+        />
+      </div>
+
+      {/* Pharmacist Information (conditionally displayed) */}
+      {formData.utilisateur.role === 'pharmacien' && (
+        <>
+          <h2>Pharmacist Information</h2>
+          <div>
+            <label>Professional Card</label>
+            <input
+              type="text"
+              name="pharmacien.cartePro"
+              value={formData.pharmacien.cartePro}
+              onChange={handleChange}
+            />
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderStep2()}
-            {currentStep === 3 && renderStep3()}
-            {currentStep === 4 && renderStep4()}
+          <div>
+            <label>Diploma</label>
+            <input
+              type="text"
+              name="pharmacien.diplome"
+              value={formData.pharmacien.diplome}
+              onChange={handleChange}
+            />
+          </div>
+        </>
+      )}
 
-            <div className="flex justify-between">
-              {currentStep > 1 && <Button type="button" onClick={handlePreviousStep}>Retour</Button>}
-              {currentStep < 4 && <Button type="button" onClick={handleNextStep}>Suivant</Button>}
-              {currentStep === 4 && <Button type="submit" disabled={status === 'pending'}>Soumettre</Button>}
-            </div>
-          </form>
+      {/* Pharmacy Information */}
+      <h2>Pharmacy Information</h2>
+      <div>
+        <label>Pharmacy Name</label>
+        <input
+          type="text"
+          name="pharmacie.nom"
+          value={formData.pharmacie.nom}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Permit Document</label>
+        <input
+          type="text"
+          name="pharmacie.docPermis"
+          value={formData.pharmacie.docPermis}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <label>Authorization Document</label>
+        <input
+          type="text"
+          name="pharmacie.docAutorisation"
+          value={formData.pharmacie.docAutorisation}
+          onChange={handleChange}
+        />
+      </div>
 
-          {/* Affichage des messages de succès ou d'erreur */}
-          {successMessage && <div className="text-green-500">{successMessage}</div>}
-          {error && <div className="text-red-500">{errorMessage || error?.message}</div>}
-          {status === 'pending' && <div>Chargement...</div>}
+      {/* Submit Button */}
+      <button type="submit" disabled={status === 'pending'}>
+        {status === 'pending' ? 'Registering...' : 'Register'}
+      </button>
+
+      {/* Validation Error Messages */}
+      {validationErrors.length > 0 && (
+        <div style={{ color: 'red' }}>
+          {validationErrors.map((err, index) => (
+            <p key={index}>{err}</p>
+          ))}
         </div>
-      </motion.div>
-    </div>
+      )}
+
+      {/* Success/Error Messages */}
+      {isSuccess && <p>Registration successful! Please check your email.</p>}
+      {isError && <p>Error: {error instanceof Error ? error.message : 'Unknown error'}</p>}
+    </form>
   );
-}
+};
+
+export default SignupForm;
