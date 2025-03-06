@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
-import Navbar from "./Home/page";
-import SplashScreen from "./SplashScreen/page";
+import SplashScreen from "./splashscreen/page";
 export default function Home() {
   return (
 <SplashScreen />    

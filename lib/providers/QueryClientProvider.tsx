@@ -1,5 +1,4 @@
-// src/QueryClientProvider.tsx
-import React from 'react';
+// QueryClientProvider.tsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();

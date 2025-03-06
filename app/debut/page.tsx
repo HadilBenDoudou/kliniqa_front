@@ -189,7 +189,7 @@ function LandingHero() {
               transition: { type: "spring", damping: 30, stiffness: 400 },
             }}
           >
-            <Link href="/Home">
+            <Link href="/home">
               Join Us <span className="font-serif ml-1">→</span>
             </Link>
           </motion.button>

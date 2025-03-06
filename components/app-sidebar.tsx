@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   SquareTerminal,
   Bot,
@@ -9,26 +9,19 @@ import {
   Frame,
   PieChart,
   Map,
-} from "lucide-react"
-
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
+} from "lucide-react";
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-// Données mises à jour avec des logos d'images
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
+export const data = {
   
   navMain: [
     {
@@ -36,26 +29,21 @@ const data = {
       url: "#",
       icon: SquareTerminal,
       isActive: true,
-      items: [
-        { title: "Home", url: "/Admin" }, // Redirection vers "/pharmacie"        
-      ],
+      items: [{ title: "Home", url: "/admin/admin-pharmacie" }],
     },
     {
       title: "Account",
       url: "#",
       icon: SquareTerminal,
-      isActive: true,
-      items: [
-        { title: "Pharmacie", url: "" }, // Redirection vers "/pharmacie"        
-      ],
+      isActive: false,
+      items: [{ title: "Pharmacie", url: "/admin/admin-pharmacie/pharmacie-user" }],
     },
-    
     {
       title: "Models",
       url: "#",
       icon: Bot,
       items: [
-        { title: "Genesis", url: "#" },
+        { title: "Genesis", url: "/admin/admin-pharmacie/pharmacie-user/Genesis" },
         { title: "Explorer", url: "#" },
         { title: "Quantum", url: "#" },
       ],
@@ -88,30 +76,50 @@ const data = {
     { name: "Sales & Marketing", url: "#", icon: PieChart },
     { name: "Travel", url: "#", icon: Map },
   ],
-}
+};
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+type NavItem = {
+  title: string;
+  url: string;
+};
+
+type NavMainItem = {
+  title: string;
+  url: string;
+  icon: React.ComponentType<any>;
+  isActive?: boolean;
+  items: NavItem[];
+};
+
+type AppSidebarProps = {
+  onNavChange: (item: NavItem, parent?: NavMainItem) => void;
+};
+
+export default function AppSidebar({ onNavChange, ...props }: AppSidebarProps) {
+  const handleNavigation = (item: NavItem, parent?: NavMainItem) => {
+    onNavChange(item, parent);
+  };
+
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-      <SidebarHeader className="p-0 h-12"> {/* Hauteur réduite */}
+   <SidebarHeader className="p-0 h-12">
   <img
     src="/logo/logo.png"
     alt="Team Logo"
     className="w-auto h-10 mx-auto object-contain"
+    style={{ marginTop: '20px' }}
   />
 </SidebarHeader>
 
-    </SidebarHeader>
+
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={data.navMain} onItemClick={handleNavigation} />
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser  />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
- 
