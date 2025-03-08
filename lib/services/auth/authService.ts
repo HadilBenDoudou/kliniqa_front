@@ -1,10 +1,10 @@
-// services/authService.ts
-
 interface BaseApiResponse {
   success: boolean;
   message?: string;
 }
-import apiClient from '../../api-client'; 
+
+import apiClient from '../../api-client';
+
 interface AuthResponse {
   success: boolean;
   data: {
@@ -13,19 +13,29 @@ interface AuthResponse {
     token?: string;
   };
 }
+
 export const signupUser = async (formData: FormData): Promise<AuthResponse> => {
-  const response = await apiClient.post<AuthResponse>("/auth/register", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return response.data;
+  try {
+    const response = await apiClient.post<AuthResponse>("/auth/register", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data", // Optional, FormData should set this
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("API call failed:", error);
+    throw error;
+  }
 };
+
 export const requestPasswordReset = async (email: string) => {
   const response = await apiClient.post<{ success: boolean; data: { message: string; userId: number } }>(
-    "/auth/generate-otp", 
+    "/auth/generate-otp",
     { email }
   );
   return response.data;
 };
+
 export const verifyResetPassword = async (userId: number, otp: string, newPassword: string) => {
   const response = await apiClient.post("/auth/reset-password", {
     userId,
@@ -34,17 +44,17 @@ export const verifyResetPassword = async (userId: number, otp: string, newPasswo
   });
   return response.data;
 };
+
 export const loginUser = async ({ email, password }: { email: string; password: string }) => {
   const response = await apiClient.post<{ success: boolean; data: {
-    session: any; message: string; userId: number 
+    userID: any; session: any; message: string; userId: number 
 } }>(
     "/auth/login",
-    { email, password } 
+    { email, password }
   );
   return response.data;
 };
 
-// Déconnexion de l'utilisateur via l'API /logout
 export async function logoutUser(): Promise<void> {
   try {
     const response = await apiClient.post<BaseApiResponse>("/auth/logout");

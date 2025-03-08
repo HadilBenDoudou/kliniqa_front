@@ -1,22 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useMemo, useId } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
 import { cn } from "@/lib/utils";
 import { fetchUsers } from "../../../../lib/services/Admin_pharmacie/userService";
-import { parsePhoneNumberFromString } from "libphonenumber-js"; // Import the library
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,9 +19,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -76,7 +63,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  CircleAlert,
   CircleX,
   Columns3,
   Ellipsis,
@@ -85,8 +71,9 @@ import {
   Plus,
   Trash,
 } from "lucide-react";
+import AlertModal from "@/components/AlertModal";
+import { deleteUser, fetchPharmacien } from "@/lib/services/profile/userservice";
 
-// Define the User type based on utilisateur schema
 type User = {
   id: string;
   name: string;
@@ -96,37 +83,33 @@ type User = {
   role: string;
   created_at: string;
   updated_at: string | null;
-  status?: "Active" | "Inactive" | "Pending";
+  status: "Active" | "Inactive";
 };
 
-// Function to get flag emoji from phone number using libphonenumber-js
 const getFlagFromPhone = (phone: string): string => {
   const phoneNumber = parsePhoneNumberFromString(phone);
   if (phoneNumber && phoneNumber.country) {
     const countryCode = phoneNumber.country;
-    // Convert ISO 3166-1 alpha-2 code to flag emoji
     return countryCode
       .split("")
       .map((char) => String.fromCodePoint(char.charCodeAt(0) + 127397))
       .join("");
   }
-  return "🌐"; // Default to globe if parsing fails
+  return "🌐";
 };
 
-// Custom filter functions
-const multiColumnFilterFn: FilterFn<User> = (row, columnId, filterValue) => {
+const multiColumnFilterFn: FilterFn<User> = (row: Row<User>, columnId: string, filterValue: string) => {
   const searchableRowContent = `${row.original.name} ${row.original.email}`.toLowerCase();
-  const searchTerm = (filterValue ?? "").toLowerCase();
+  const searchTerm = filterValue.toLowerCase();
   return searchableRowContent.includes(searchTerm);
 };
 
-const statusFilterFn: FilterFn<User> = (row, columnId, filterValue: string[]) => {
-  if (!filterValue?.length) return true;
+const statusFilterFn: FilterFn<User> = (row: Row<User>, columnId: string, filterValue: string[]) => {
+  if (!filterValue || filterValue.length === 0) return true;
   const status = row.getValue(columnId) as string;
   return filterValue.includes(status);
 };
 
-// Define columns for the users table
 const columns: ColumnDef<User>[] = [
   {
     id: "select",
@@ -161,18 +144,18 @@ const columns: ColumnDef<User>[] = [
   {
     header: "Email",
     accessorKey: "email",
-    size: 200,
+    size: 180,
   },
   {
     header: "Phone",
     accessorKey: "phone",
     cell: ({ row }) => (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <span>{getFlagFromPhone(row.getValue("phone") as string)}</span>
         <span>{row.getValue("phone")}</span>
       </div>
     ),
-    size: 150,
+    size: 130,
   },
   {
     header: "Image",
@@ -182,19 +165,19 @@ const columns: ColumnDef<User>[] = [
         <img
           src={row.getValue("image") as string}
           alt="User"
-          className="w-10 h-10 rounded-full object-cover"
+          className="w-8 h-8 rounded-full object-cover"
         />
       ) : (
         <span className="text-muted-foreground">N/A</span>
       )
     ),
-    size: 80,
+    size: 60,
   },
   {
     header: "Role",
     accessorKey: "role",
     cell: ({ row }) => <Badge>{row.getValue("role")}</Badge>,
-    size: 100,
+    size: 80,
   },
   {
     header: "Status",
@@ -208,14 +191,14 @@ const columns: ColumnDef<User>[] = [
         {row.getValue("status") || "N/A"}
       </Badge>
     ),
-    size: 100,
+    size: 80,
     filterFn: statusFilterFn,
   },
   {
     header: "Created At",
     accessorKey: "created_at",
     cell: ({ row }) => new Date(row.getValue("created_at") as string).toLocaleDateString(),
-    size: 120,
+    size: 100,
   },
   {
     header: "Updated At",
@@ -224,13 +207,13 @@ const columns: ColumnDef<User>[] = [
       row.getValue("updated_at")
         ? new Date(row.getValue("updated_at") as string).toLocaleDateString()
         : "N/A",
-    size: 120,
+    size: 100,
   },
   {
     id: "actions",
     header: "Actions",
     cell: ({ row }) => <RowActions row={row} />,
-    size: 60,
+    size: 50,
     enableSorting: false,
     enableHiding: false,
   },
@@ -238,6 +221,8 @@ const columns: ColumnDef<User>[] = [
 
 export default function StaticTablePage() {
   const id = useId();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [pagination, setPagination] = useState<PaginationState>({
@@ -245,49 +230,103 @@ export default function StaticTablePage() {
     pageSize: 10,
   });
   const inputRef = useRef<HTMLInputElement>(null);
-
   const [sorting, setSorting] = useState<SortingState>([
     {
       id: "name",
       desc: false,
     },
   ]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleteSuccessOpen, setIsDeleteSuccessOpen] = useState(false);
+  const [selectedRowsToDelete, setSelectedRowsToDelete] = useState<Row<User>[]>([]);
 
-  // Fetch users dynamically with TanStack Query
-  const { data: users = [], isLoading, error } = useQuery<User[]>({
+  const { data: allUsers = [], isLoading, error } = useQuery<User[]>({
     queryKey: ["users"],
     queryFn: async () => {
       const fetchedUsers = await fetchUsers();
-      return fetchedUsers.map((user) => ({
-        id: user.id.toString(),
-        name: `${user.nom} ${user.prenom}`,
-        email: user.email,
-        phone: user.telephone,
-        image: user.image || null,
-        role: user.role,
-        created_at: user.created_at || new Date().toISOString(),
-        updated_at: user.updated_at || null,
-        status: user.status || "Active",
-      }));
+      console.log("Fetched users:", fetchedUsers);
+
+      const usersWithStatus = await Promise.all(
+        fetchedUsers.map(async (user) => {
+          let status: "Active" | "Inactive" = "Inactive";
+          try {
+            const userId = parseInt(user.id.toString(), 10);
+            if (isNaN(userId) || userId <= 0) {
+              console.warn(`Skipping invalid userId: ${user.id}`);
+              return {
+                id: user.id.toString(),
+                name: `${user.nom} ${user.prenom}`,
+                email: user.email,
+                phone: user.telephone,
+                image: user.image || null,
+                role: user.role,
+                created_at: user.created_at || new Date().toISOString(),
+                updated_at: user.updated_at || null,
+                status,
+              };
+            }
+            const pharmacien = await fetchPharmacien(userId);
+            status = pharmacien.etat ? "Active" : "Inactive";
+          } catch (err) {
+            console.error(`Failed to fetch pharmacist data for user ${user.id}:`, err);
+            status = "Inactive";
+          }
+
+          return {
+            id: user.id.toString(),
+            name: `${user.nom} ${user.prenom}`,
+            email: user.email,
+            phone: user.telephone,
+            image: user.image || null,
+            role: user.role,
+            created_at: user.created_at || new Date().toISOString(),
+            updated_at: user.updated_at || null,
+            status,
+          };
+        })
+      );
+
+      return usersWithStatus;
+    },
+    retry: 1,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (userIds: number[]) => {
+      console.log("Attempting to delete users with IDs:", userIds);
+      await Promise.all(userIds.map((id) => deleteUser(id)));
+    },
+    onSuccess: () => {
+      console.log("Deletion successful");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setIsDeleteConfirmOpen(false);
+      setIsDeleteSuccessOpen(true);
+      table.resetRowSelection();
+    },
+    onError: (err) => {
+      console.error("Error deleting users:", err);
+      alert("Failed to delete users: " + (err instanceof Error ? err.message : "Unknown error"));
     },
   });
 
-  const [data, setData] = useState<User[]>(users);
+  const [data, setData] = useState<User[]>(allUsers);
 
-  // Update local data when fetched data changes
   React.useEffect(() => {
     if (!isLoading && !error) {
-      setData(users);
+      setData(allUsers);
     }
-  }, [users, isLoading, error]);
+  }, [allUsers, isLoading, error]);
 
-  const handleDeleteRows = () => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    const updatedData = data.filter(
-      (item) => !selectedRows.some((row) => row.original.id === item.id),
-    );
-    setData(updatedData);
-    table.resetRowSelection();
+  const handleDeleteRows = (rows: Row<User>[]) => {
+    console.log("Rows selected for deletion:", rows);
+    setSelectedRowsToDelete(rows);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    console.log("Confirming deletion for rows:", selectedRowsToDelete);
+    const userIds = selectedRowsToDelete.map((row) => parseInt(row.original.id, 10));
+    deleteMutation.mutate(userIds);
   };
 
   const table = useReactTable({
@@ -311,24 +350,24 @@ export default function StaticTablePage() {
     },
   });
 
-  const uniqueStatusValues = useMemo(() => {
-    const statusColumn = table.getColumn("status");
-    return statusColumn ? Array.from(statusColumn.getFacetedUniqueValues().keys()).sort() : [];
-  }, [table.getColumn("status")?.getFacetedUniqueValues()]);
+  const statusOptions = [
+    { value: "Active", label: "Active" },
+    { value: "Inactive", label: "Inactive" },
+  ];
 
   const statusCounts = useMemo(() => {
     const statusColumn = table.getColumn("status");
     return statusColumn ? statusColumn.getFacetedUniqueValues() : new Map();
-  }, [table.getColumn("status")?.getFacetedUniqueValues()]);
+  }, [table]);
 
   const selectedStatuses = useMemo(() => {
-    const filterValue = table.getColumn("status")?.getFilterValue() as string[];
+    const filterValue = table.getColumn("status")?.getFilterValue() as string[] | undefined;
     return filterValue ?? [];
-  }, [table.getColumn("status")?.getFilterValue()]);
+  }, [table]);
 
   const handleStatusChange = (checked: boolean, value: string) => {
-    const filterValue = table.getColumn("status")?.getFilterValue() as string[];
-    const newFilterValue = filterValue ? [...filterValue] : [];
+    const filterValue = table.getColumn("status")?.getFilterValue() as string[] | undefined;
+    let newFilterValue = filterValue ? [...filterValue] : [];
 
     if (checked) {
       newFilterValue.push(value);
@@ -339,7 +378,11 @@ export default function StaticTablePage() {
       }
     }
 
-    table.getColumn("status")?.setFilterValue(newFilterValue.length ? newFilterValue : undefined);
+    table.getColumn("status")?.setFilterValue(newFilterValue.length > 0 ? newFilterValue : undefined);
+  };
+
+  const handleClearStatuses = () => {
+    table.getColumn("status")?.setFilterValue(undefined);
   };
 
   if (isLoading) {
@@ -362,9 +405,8 @@ export default function StaticTablePage() {
 
   return (
     <AppLayout>
-      <h1 className="text-2xl font-bold">Pharmacists</h1>
-      <div className="space-y-4 max-w-[1000px]">
-        {/* Filters */}
+      <h1 className="text-2xl font-bold mb-4">Pharmacists</h1>
+      <div className="space-y-4 w-full max-w-[1200px] mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -375,7 +417,7 @@ export default function StaticTablePage() {
                   "peer min-w-60 ps-9",
                   Boolean(table.getColumn("name")?.getFilterValue()) && "pe-9",
                 )}
-                value={(table.getColumn("name")?.getFilterValue() ?? "") as string}
+                value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
                 onChange={(e) => table.getColumn("name")?.setFilterValue(e.target.value)}
                 placeholder="Filter by name or email..."
                 type="text"
@@ -401,11 +443,11 @@ export default function StaticTablePage() {
             </div>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className={cn(selectedStatuses.length > 0 && "border-blue-500")}>
                   <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />
                   Status
                   {selectedStatuses.length > 0 && (
-                    <span className="-me-1 ms-3 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
+                    <span className="-me-1 ms-3 inline-flex h-5 items-center rounded bg-blue-100 px-1 text-[0.625rem] font-medium text-blue-800">
                       {selectedStatuses.length}
                     </span>
                   )}
@@ -413,22 +455,38 @@ export default function StaticTablePage() {
               </PopoverTrigger>
               <PopoverContent className="min-w-36 p-3" align="start">
                 <div className="space-y-3">
-                  <div className="text-xs font-medium text-muted-foreground">Filters</div>
-                  <div className="space-y-3">
-                    {uniqueStatusValues.map((value, i) => (
-                      <div key={value} className="flex items-center gap-2">
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs font-medium text-muted-foreground">Status Filters</div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearStatuses}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {statusOptions.map((option, i) => (
+                      <div key={option.value} className="flex items-center gap-2">
                         <Checkbox
                           id={`${id}-${i}`}
-                          checked={selectedStatuses.includes(value)}
-                          onCheckedChange={(checked: boolean) => handleStatusChange(checked, value)}
+                          checked={selectedStatuses.includes(option.value)}
+                          onCheckedChange={(checked: boolean) => handleStatusChange(checked, option.value)}
+                          className={cn(
+                            "border-2 rounded",
+                            selectedStatuses.includes(option.value)
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-300",
+                          )}
                         />
                         <Label
                           htmlFor={`${id}-${i}`}
-                          className="flex grow justify-between gap-2 font-normal"
+                          className="flex grow justify-between gap-2 font-normal text-sm"
                         >
-                          {value}{" "}
+                          {option.label}
                           <span className="ms-2 text-xs text-muted-foreground">
-                            {statusCounts.get(value)}
+                            {statusCounts.get(option.value) || 0}
                           </span>
                         </Label>
                       </div>
@@ -465,36 +523,17 @@ export default function StaticTablePage() {
           </div>
           <div className="flex items-center gap-3">
             {table.getSelectedRowModel().rows.length > 0 && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button className="ml-auto" variant="outline">
-                    <Trash className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />
-                    Delete
-                    <span className="-me-1 ms-3 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
-                      {table.getSelectedRowModel().rows.length}
-                    </span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <div className="flex flex-col gap-2 max-sm:items-center sm:flex-row sm:gap-4">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border" aria-hidden="true">
-                      <CircleAlert className="opacity-80" size={16} strokeWidth={2} />
-                    </div>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete{" "}
-                        {table.getSelectedRowModel().rows.length} selected{" "}
-                        {table.getSelectedRowModel().rows.length === 1 ? "row" : "rows"}.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteRows}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                className="ml-auto"
+                variant="outline"
+                onClick={() => handleDeleteRows(table.getSelectedRowModel().rows)}
+              >
+                <Trash className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />
+                Delete
+                <span className="-me-1 ms-3 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
+                  {table.getSelectedRowModel().rows.length}
+                </span>
+              </Button>
             )}
             <Button className="ml-auto" variant="outline">
               <Plus className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />
@@ -503,23 +542,21 @@ export default function StaticTablePage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-lg border border-border bg-background">
-          <Table className="w-full">
+        <div className="rounded-lg border border-border bg-background overflow-x-auto">
+          <Table className="w-full table-auto">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="hover:bg-transparent bg-gray-50">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      style={{ width: `${header.getSize()}px` }}
-                      className="h-11"
+                      style={{ width: header.column.getSize() === 0 ? "auto" : `${header.getSize()}px` }}
+                      className="h-12 text-sm font-semibold text-gray-700"
                     >
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <div
                           className={cn(
-                            header.column.getCanSort() &&
-                              "flex h-full cursor-pointer select-none items-center justify-between gap-2",
+                            "flex h-full cursor-pointer select-none items-center justify-between gap-2",
                           )}
                           onClick={header.column.getToggleSortingHandler()}
                           onKeyDown={(e) => {
@@ -564,9 +601,9 @@ export default function StaticTablePage() {
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className="h-14">
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="last:py-0">
+                      <TableCell key={cell.id} className="py-2 text-sm text-gray-900">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -574,8 +611,8 @@ export default function StaticTablePage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No results.
+                  <TableCell colSpan={columns.length} className="h-24 text-center text-gray-500">
+                    No pharmacists found.
                   </TableCell>
                 </TableRow>
               )}
@@ -583,8 +620,28 @@ export default function StaticTablePage() {
           </Table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between gap-8">
+        <AlertModal
+          open={isDeleteConfirmOpen}
+          type="error"
+          message={`Are you sure you want to delete ${selectedRowsToDelete.length} selected row${selectedRowsToDelete.length > 1 ? "s" : ""}? This action cannot be undone.`}
+          onClose={() => {
+            console.log("Closing bulk delete confirmation modal");
+            setIsDeleteConfirmOpen(false);
+          }}
+          onConfirm={() => {
+            console.log("Confirming bulk deletion");
+            confirmDelete();
+          }}
+        />
+
+        <AlertModal
+          open={isDeleteSuccessOpen}
+          type="success"
+          message={`Successfully deleted ${selectedRowsToDelete.length} row${selectedRowsToDelete.length > 1 ? "s" : ""}.`}
+          onClose={() => setIsDeleteSuccessOpen(false)}
+        />
+
+        <div className="flex items-center justify-between gap-8 mt-4">
           <div className="flex items-center gap-3">
             <Label htmlFor={id} className="max-sm:sr-only">
               Rows per page
@@ -600,6 +657,8 @@ export default function StaticTablePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -680,53 +739,102 @@ export default function StaticTablePage() {
 }
 
 function RowActions({ row }: { row: Row<User> }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [isSingleDeleteConfirmOpen, setIsSingleDeleteConfirmOpen] = useState(false);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      console.log("Attempting to delete user with ID:", userId);
+      const response = await deleteUser(userId);
+      console.log("Delete response:", response);
+      return response;
+    },
+    onSuccess: () => {
+      console.log("Single deletion successful");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setIsSingleDeleteConfirmOpen(false);
+    },
+    onError: (err) => {
+      console.error("Error deleting user:", err);
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      alert(`Failed to delete user: ${errorMessage}`);
+      setIsSingleDeleteConfirmOpen(false);
+    },
+    onSettled: () => {
+      console.log("Mutation settled (success or error)");
+    },
+  });
+
+  const handleViewDetails = (userId: string) => {
+    router.push(`/admin/admin-pharmacie/pharmacie-user/pharmacists/${userId}`);
+  };
+
+  const handleEdit = (userId: string) => {
+    router.push(`/admin/admin-pharmacie/pharmacie-user/pharmacists/edit/${userId}`);
+  };
+
+  const handleSingleDelete = () => {
+    console.log("Single row selected for deletion:", row.original.id);
+    setIsSingleDeleteConfirmOpen(true);
+  };
+
+  const confirmSingleDelete = () => {
+    console.log("Confirming single deletion for row:", row);
+    const userId = parseInt(row.original.id, 10);
+    if (isNaN(userId)) {
+      console.error("Invalid userId:", row.original.id);
+      alert("Invalid user ID. Please try again.");
+      setIsSingleDeleteConfirmOpen(false);
+      return;
+    }
+    deleteMutation.mutate(userId);
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <div className="flex justify-end">
-          <Button size="icon" variant="ghost" className="shadow-none" aria-label="Edit item">
-            <Ellipsis size={16} strokeWidth={2} aria-hidden="true" />
-          </Button>
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <span>Edit</span>
-            <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <div className="flex justify-end">
+            <Button size="icon" variant="ghost" className="shadow-none" aria-label="Edit item">
+              <Ellipsis size={16} strokeWidth={2} aria-hidden="true" />
+            </Button>
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={() => handleViewDetails(row.original.id)}>
+              <span>View Details</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEdit(row.original.id)}>
+              <span>Edit</span>
+              <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={handleSingleDelete}
+          >
+            <span>Delete</span>
+            <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <span>Duplicate</span>
-            <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <span>Archive</span>
-            <DropdownMenuShortcut>⌘A</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>More</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem>Move to project</DropdownMenuItem>
-              <DropdownMenuItem>Move to folder</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Advanced options</DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>Share</DropdownMenuItem>
-          <DropdownMenuItem>Add to favorites</DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive">
-          <span>Delete</span>
-          <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertModal
+        open={isSingleDeleteConfirmOpen}
+        type="success"
+        message={`Are you sure you want to delete ${row.original.name}? This action cannot be undone.`}
+        onClose={() => {
+          console.log("Closing single delete confirmation modal");
+          setIsSingleDeleteConfirmOpen(false);
+        }}
+        onConfirm={() => {
+          console.log("Confirming single deletion");
+          confirmSingleDelete();
+        }}
+      />
+    </>
   );
 }

@@ -47,6 +47,7 @@ const SignupForm = ({ className, ...props }: React.ComponentProps<"div">) => {
       nom: "",
       docPermis: null as File | null,
       docAutorisation: null as File | null,
+      pharmacie_image: null as File | null,
     },
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -64,8 +65,10 @@ const SignupForm = ({ className, ...props }: React.ComponentProps<"div">) => {
       setTimeout(() => router.push("/login"), 1500);
     },
     onError: (error: any) => {
-      setGeneralError(`Registration failed: ${error.response?.data?.error || error.message}`);
+      const errorMessage = error.response?.data?.error || error.message || "An unknown error occurred";
+      setGeneralError(`Registration failed: ${errorMessage}`);
       setSuccess(null);
+      console.error("Signup error:", error);
     },
   });
 
@@ -95,30 +98,43 @@ const SignupForm = ({ className, ...props }: React.ComponentProps<"div">) => {
 
   const prepareFormData = (): FormData => {
     const formDataToSend = new FormData();
-    Object.entries(formData.utilisateur).forEach(([key, value]) => {
+    const { utilisateur, adresse, pharmacien, pharmacie } = formData;
+
+    Object.entries(utilisateur).forEach(([key, value]) => {
       if (key === "image" && value instanceof File) {
-        formDataToSend.append("utilisateur.image", value);
+        console.log(`Appending utilisateur.${key}:`, value.name, value);
+        formDataToSend.append(`utilisateur.${key}`, value);
       } else if (value && typeof value === "string") {
         formDataToSend.append(`utilisateur.${key}`, value);
       }
     });
-    Object.entries(formData.adresse).forEach(([key, value]) => {
+
+    Object.entries(adresse).forEach(([key, value]) => {
       formDataToSend.append(`adresse.${key}`, value || "");
     });
-    if (formData.utilisateur.role === "pharmacien") {
-      Object.entries(formData.pharmacien).forEach(([key, value]) => {
+
+    if (utilisateur.role === "pharmacien") {
+      Object.entries(pharmacien).forEach(([key, value]) => {
         if (value instanceof File) {
+          console.log(`Appending pharmacien.${key}:`, value.name, value);
           formDataToSend.append(`pharmacien.${key}`, value);
         }
       });
-      Object.entries(formData.pharmacie).forEach(([key, value]) => {
+
+      Object.entries(pharmacie).forEach(([key, value]) => {
         if (key === "nom" && value) {
           formDataToSend.append(`pharmacie.${key}`, value);
         } else if (value instanceof File) {
+          console.log(`Appending pharmacie.${key}:`, value.name, value);
           formDataToSend.append(`pharmacie.${key}`, value);
         }
       });
     }
+
+    for (const [key, value] of formDataToSend.entries()) {
+      console.log(`${key}:`, value instanceof File ? value.name : value);
+    }
+
     return formDataToSend;
   };
 
@@ -145,6 +161,7 @@ const SignupForm = ({ className, ...props }: React.ComponentProps<"div">) => {
           nom: formData.pharmacie.nom,
           docPermis: formData.pharmacie.docPermis?.name || "",
           docAutorisation: formData.pharmacie.docAutorisation?.name || "",
+          pharmacie_image: formData.pharmacie.pharmacie_image?.name || "",
         },
       });
 
@@ -168,18 +185,20 @@ const SignupForm = ({ className, ...props }: React.ComponentProps<"div">) => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white">
-      <LogoAndAddress />  
-      
+      <LogoAndAddress />
       <div
         className={cn(
           "w-full max-w-md flex flex-col gap-6 mt-[30px] p-6 bg-white rounded-lg shadow-lg",
           className
         )}
         {...props}
-      > <div className="flex flex-col items-center gap-2 text-center">
-      <h1 className="text-2xl font-bold">Welcome to Kliniqa </h1>
-      <p className="text-balance text-sm text-muted-foreground">Enter your email below to signup to your account</p>
-    </div>
+      >
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h1 className="text-2xl font-bold">Welcome to Kliniqa</h1>
+          <p className="text-balance text-sm text-muted-foreground">
+            Enter your email below to signup to your account
+          </p>
+        </div>
         <form onSubmit={handleSubmit}>
           <AlertComponent
             variant="success"
@@ -200,7 +219,6 @@ const SignupForm = ({ className, ...props }: React.ComponentProps<"div">) => {
             isVisible={signupMutation.isPending}
           />
 
-          {/* Step Progress Bar */}
           <div className="relative mb-6">
             <div className="flex justify-between text-xs mb-4">
               {[1, 2, 3, 4].map((s) => (

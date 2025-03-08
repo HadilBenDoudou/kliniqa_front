@@ -26,6 +26,7 @@ export const Step4: React.FC<Step4Props> = ({ formData, setFormData, errors, set
   const handleFileChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log(`Selected file for pharmacie.${field}:`, file.name, file);
       setFormData((prev: any) => ({
         ...prev,
         pharmacie: { ...prev.pharmacie, [field]: file },
@@ -38,6 +39,7 @@ export const Step4: React.FC<Step4Props> = ({ formData, setFormData, errors, set
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file && (file.type.startsWith("image/") || file.type === "application/pdf")) {
+      console.log(`Dropped file for pharmacie.${field}:`, file.name, file);
       setFormData((prev: any) => ({
         ...prev,
         pharmacie: { ...prev.pharmacie, [field]: file },
@@ -59,11 +61,11 @@ export const Step4: React.FC<Step4Props> = ({ formData, setFormData, errors, set
       <h2 className="text-xl font-semibold">Pharmacy Information</h2>
       <div className="space-y-2">
         <Label htmlFor="nom_pharmacie">Pharmacy Name</Label>
-        <Input 
-          id="nom_pharmacie" 
-          name="pharmacie.nom" 
-          value={formData.pharmacie?.nom || ""} 
-          onChange={handleChange} 
+        <Input
+          id="nom_pharmacie"
+          name="pharmacie.nom"
+          value={formData.pharmacie?.nom || ""}
+          onChange={handleChange}
         />
         {errors["pharmacie.nom"] && <p className="text-red-500 text-sm">{errors["pharmacie.nom"]}</p>}
       </div>
@@ -86,6 +88,16 @@ export const Step4: React.FC<Step4Props> = ({ formData, setFormData, errors, set
         onDrop={handleDrop("docAutorisation")}
         onRemove={handleRemoveFile("docAutorisation")}
         error={errors["pharmacie.docAutorisation"]}
+      />
+      <FileUpload
+        id="pharmacie_image"
+        label="Pharmacy Image"
+        file={formData.pharmacie?.pharmacie_image}
+        accept="image/*"
+        onFileChange={handleFileChange("pharmacie_image")}
+        onDrop={handleDrop("pharmacie_image")}
+        onRemove={handleRemoveFile("pharmacie_image")}
+        error={errors["pharmacie.pharmacie_image"]}
       />
     </motion.div>
   );

@@ -127,3 +127,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Add this to your CSS file or a <style> tag in your component */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+/* Ensure the animation class uses it */
+.animate-marquee {
+  animation: marquee var(--duration) linear infinite;
+}

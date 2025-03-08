@@ -1,11 +1,11 @@
 import React from "react";
 import { Search, PhoneCall } from "lucide-react";
-import { Button } from "@/components/ui/button"; // Importation de composants de ShadCN UI
-import { Input } from "@/components/ui/input"; // Importation de composants de ShadCN UI
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const Header = () => (
-  <div className="flex flex-col md:flex-row items-center justify-between px-6 py-4 bg-white shadow-md">
-    {/* Logo + Adresse */}
+  <div className="flex flex-col md:flex-row items-center justify-between px-6 py-4 bg-white shadow-md relative z-30">
+    {/* Logo + Address */}
     <div className="flex items-center space-x-4 mb-4 md:mb-0">
       <img src="/logo/logo.png" alt="Kliniqa Logo" className="h-10" />
       <span className="text-xs md:text-sm text-gray-500">
@@ -13,7 +13,7 @@ const Header = () => (
       </span>
     </div>
 
-    {/* Barre de recherche */}
+    {/* Search Bar */}
     <div className="flex items-center bg-gray-100 p-2 rounded-full w-full md:w-1/3 border border-gray-300 mb-4 md:mb-0">
       <Search className="h-5 w-5 text-gray-500 ml-2" />
       <Input

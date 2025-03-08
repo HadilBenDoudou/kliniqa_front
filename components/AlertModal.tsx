@@ -17,6 +17,7 @@ interface AlertModalProps {
   message: string;
   onClose: () => void;
   onConfirm?: () => void;
+  
 }
 
 const AlertModal: React.FC<AlertModalProps> = ({ open, type, message, onClose, onConfirm }) => {

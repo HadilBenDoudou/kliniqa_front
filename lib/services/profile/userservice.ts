@@ -58,8 +58,8 @@ export interface AdresseData {
   city: string;
   postal_code: string;
   country: string;
-  latitude?: number | null;
-  longitude?: number | null;
+  latitude?: string | null;
+  longitude?: string | null;
 }
 
 export interface PharmacienData {
@@ -299,7 +299,6 @@ export async function updateUserProfile(
       data,
       {
         headers: {
-          "Content-Type": "application/json",
           Accept: "application/json",
         },
       }
@@ -361,5 +360,61 @@ export async function deleteUser(userId: number): Promise<void> {
   } catch (error) {
     console.error("Error deleting user:", error);
     throw error instanceof Error ? error : new Error("Unknown error deleting user");
+  }
+}
+interface ValidateApiResponse {
+  success: boolean;
+  data?: { pharmacien: Pharmacien };
+  message?: string;
+}
+
+// Validate pharmacist status via /users/validate/:id
+
+// Updated validatePharmacist function with debugging and fallback
+export async function validatePharmacist(userId: number, etat: boolean): Promise<Pharmacien> {
+  try {
+    if (isNaN(userId) || userId <= 0) {
+      throw new Error("Invalid userId provided");
+    }
+
+    const response = await apiClient.put<ValidateApiResponse>(
+      `/users/users/validate/${userId}`, // Verify this endpoint with your backend
+      { etat },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
+
+    // Log full response for debugging
+    console.log("Full API Response:", JSON.stringify(response.data, null, 2));
+
+    if (!response.data || !response.data.success) {
+      throw new Error(`Failed to validate pharmacist: ${response.data?.message || "Unknown error"}`);
+    }
+
+    // Handle case where pharmacien might be directly in data or nested
+    const pharmacienData = response.data.data?.pharmacien ?? (response.data.data as unknown as Pharmacien);
+    if (!pharmacienData) {
+      console.warn("No detailed pharmacist data returned, returning minimal object");
+      return {
+        cartePro: "",
+        diplome: "",
+        assurancePro: "",
+        etat: etat, // Assume the update worked based on input
+      };
+    }
+
+    return {
+      cartePro: pharmacienData.cartePro || "",
+      diplome: pharmacienData.diplome || "",
+      assurancePro: pharmacienData.assurancePro || "",
+      etat: pharmacienData.etat ?? etat, // Fallback to input etat if not returned
+    };
+  } catch (error) {
+    console.error("Error validating pharmacist:", error);
+    throw error instanceof Error ? error : new Error("Unknown error validating pharmacist");
   }
 }

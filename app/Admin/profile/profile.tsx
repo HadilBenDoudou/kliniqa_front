@@ -187,63 +187,59 @@ export default function Profile() {
       setUpdateStatus({ success: false, message: "User ID is missing" });
       return;
     }
-
+  
     const utilisateurData: Partial<UtilisateurData> = {};
     const adresseData: Partial<AdresseData> = {};
     const pharmacienData: Partial<PharmacienData> = {};
     const pharmacieData: Partial<PharmacieData> = {};
-
-    // Populate required fields
-    if (formData.prenom) utilisateurData.prenom = formData.prenom;
-    if (formData.email) utilisateurData.email = formData.email;
-    if (formData.role) utilisateurData.role = formData.role;
-
-    // Populate optional fields if non-empty
-    if (formData.nom) utilisateurData.nom = formData.nom;
-    if (formData.telephone) {
-      utilisateurData.telephone = formData.telephone; // Send as-is, with +
-    }
-    if (formData.image) utilisateurData.image = formData.image.name || user?.image || "";
-
-    // Populate address fields if non-empty
-    if (formData.adresse.city) adresseData.city = formData.adresse.city;
-    if (formData.adresse.country) adresseData.country = formData.adresse.country;
-    if (formData.adresse.latitude) adresseData.latitude = formData.adresse.latitude;
-    if (formData.adresse.longitude) adresseData.longitude = formData.adresse.longitude;
-    if (formData.adresse.num_street) adresseData.num_street = formData.adresse.num_street;
-    if (formData.adresse.street) adresseData.street = formData.adresse.street;
-    if (formData.adresse.postal_code) adresseData.postal_code = formData.adresse.postal_code;
-
-    // Populate pharmacist fields if non-empty
-    if (formData.pharmacien.diplome) pharmacienData.diplome = formData.pharmacien.diplome.name || pharmacien?.diplome || "";
-    if (formData.pharmacien.etat !== undefined) pharmacienData.etat = formData.pharmacien.etat;
-    if (formData.pharmacien.assurancePro) pharmacienData.assurancePro = formData.pharmacien.assurancePro.name || pharmacien?.assurancePro || "";
-    if (formData.pharmacien.cartePro) pharmacienData.cartePro = formData.pharmacien.cartePro.name || pharmacien?.cartePro || "";
-
-    // Populate pharmacy fields if non-empty
-    if (formData.pharmacie.nom) pharmacieData.nom = formData.pharmacie.nom;
-    if (formData.pharmacie.docPermis) pharmacieData.docPermis = formData.pharmacie.docPermis.name || pharmacie?.docPermis || "";
-    if (formData.pharmacie.docAutorisation) pharmacieData.docAutorisation = formData.pharmacie.docAutorisation.name || pharmacie?.docAutorisation || "";
-
+  
+    // Only include changed fields for utilisateurData
+    if (formData.nom && formData.nom !== user?.nom) utilisateurData.nom = formData.nom;
+    if (formData.prenom && formData.prenom !== user?.prenom) utilisateurData.prenom = formData.prenom;
+    if (formData.email && formData.email !== user?.email) utilisateurData.email = formData.email;
+    if (formData.telephone && formData.telephone !== user?.telephone) utilisateurData.telephone = formData.telephone;
+    if (formData.role && formData.role !== user?.role) utilisateurData.role = formData.role;
+    if (formData.image) utilisateurData.image = formData.image.name; // or use a method to convert the file to a string
+  
+    // Only include changed fields for adresseData
+    if (formData.adresse.num_street && formData.adresse.num_street !== user?.adresse?.num_street) adresseData.num_street = formData.adresse.num_street;
+    if (formData.adresse.street && formData.adresse.street !== user?.adresse?.street) adresseData.street = formData.adresse.street;
+    if (formData.adresse.city && formData.adresse.city !== user?.adresse?.city) adresseData.city = formData.adresse.city;
+    if (formData.adresse.postal_code && formData.adresse.postal_code !== user?.adresse?.postal_code) adresseData.postal_code = formData.adresse.postal_code;
+    if (formData.adresse.country && formData.adresse.country !== user?.adresse?.country) adresseData.country = formData.adresse.country;
+    if (formData.adresse.latitude && formData.adresse.latitude !== user?.adresse?.latitude) adresseData.latitude = formData.adresse.latitude.toString();
+    if (formData.adresse.longitude && formData.adresse.longitude !== user?.adresse?.longitude) adresseData.longitude = formData.adresse.longitude.toString();
+  
+    // Only include changed fields for pharmacienData
+    if (formData.pharmacien.cartePro) pharmacienData.cartePro = formData.pharmacien.cartePro.name; // or use a method to convert the file to a string
+    if (formData.pharmacien.diplome) pharmacienData.diplome = formData.pharmacien.diplome.name;
+    if (formData.pharmacien.assurancePro) pharmacienData.assurancePro = formData.pharmacien.assurancePro.name;
+    if (formData.pharmacien.etat !== undefined && formData.pharmacien.etat !== pharmacien?.etat) pharmacienData.etat = formData.pharmacien.etat;
+  
+    // Only include changed fields for pharmacieData
+    if (formData.pharmacie.nom && formData.pharmacie.nom !== pharmacie?.nom) pharmacieData.nom = formData.pharmacie.nom;
+    if (formData.pharmacie.docPermis) pharmacieData.docPermis = formData.pharmacie.docPermis.name;
+    if (formData.pharmacie.docAutorisation) pharmacieData.docAutorisation = formData.pharmacie.docAutorisation.name;
+  
     const payload = {
       utilisateurData,
       adresseData,
       pharmacienData,
       pharmacieData,
     };
-
+  
     console.log("Payload to send:", payload);
-
+  
     try {
       const updatedUser = await updateUserProfile(userId, payload);
       setUpdateStatus({ success: true, message: "Profile updated successfully!" });
       setIsEditing(false);
-
+  
       queryClient.invalidateQueries({ queryKey: ["user", userId] });
       queryClient.invalidateQueries({ queryKey: ["adresse", userId] });
       queryClient.invalidateQueries({ queryKey: ["pharmacien", userId] });
       queryClient.invalidateQueries({ queryKey: ["pharmacie", userId] });
-
+  
       setFormData((prev) => ({
         ...prev,
         nom: updatedUser.nom,
@@ -251,22 +247,30 @@ export default function Profile() {
         email: updatedUser.email,
         telephone: updatedUser.telephone,
         role: updatedUser.role,
+        image: null,
         adresse: updatedUser.adresse || prev.adresse,
         pharmacien: {
           ...prev.pharmacien,
+          cartePro: null,
+          diplome: null,
+          assurancePro: null,
           etat: pharmacien?.etat ?? prev.pharmacien.etat,
         },
         pharmacie: {
           ...prev.pharmacie,
           nom: pharmacie?.nom || prev.pharmacie.nom,
+          docPermis: null,
+          docAutorisation: null,
         },
       }));
     } catch (error) {
       console.error("Update failed:", error);
-      setUpdateStatus({ success: false, message: error instanceof Error ? error.message : "Failed to update profile" });
+      setUpdateStatus({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to update profile",
+      });
     }
   };
-
   if (userLoading || pharmacienLoading || pharmacieLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">

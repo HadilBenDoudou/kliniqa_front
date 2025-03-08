@@ -46,6 +46,7 @@ export const Step1: React.FC<Step1Props> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log("Selected file for utilisateur.image:", file.name, file);
       setFormData((prev: any) => ({
         ...prev,
         utilisateur: { ...prev.utilisateur, image: file },
@@ -58,6 +59,7 @@ export const Step1: React.FC<Step1Props> = ({
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
+      console.log("Dropped file for utilisateur.image:", file.name, file);
       setFormData((prev: any) => ({
         ...prev,
         utilisateur: { ...prev.utilisateur, image: file },

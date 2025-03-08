@@ -14,6 +14,7 @@ export const Step3: React.FC<Step3Props> = ({ formData, setFormData, errors, set
   const handleFileChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log(`Selected file for pharmacien.${field}:`, file.name, file);
       setFormData((prev: any) => ({
         ...prev,
         pharmacien: { ...prev.pharmacien, [field]: file },
@@ -26,6 +27,7 @@ export const Step3: React.FC<Step3Props> = ({ formData, setFormData, errors, set
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file && (file.type.startsWith("image/") || file.type === "application/pdf")) {
+      console.log(`Dropped file for pharmacien.${field}:`, file.name, file);
       setFormData((prev: any) => ({
         ...prev,
         pharmacien: { ...prev.pharmacien, [field]: file },

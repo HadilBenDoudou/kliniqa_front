@@ -21,7 +21,7 @@ export default function LoginPage() {
     mutationFn: loginUser,
     onSuccess: (data) => {
       console.log("Full login response:", data);
-      const userId = data.data?.userId;
+      const userId = data.data?.userID;
       const accessToken = data.data?.session?.session.access_token;
       console.log("accessToken response:", accessToken);
 
