@@ -10,6 +10,7 @@ import {Navbar} from "./Navbar";
 import { CardHoverEffectDemo } from "./services";
 import { TestimonialsSectionDemo } from "./TestimonialSection";
 import { Feature108Demo } from "./TrustedSection";
+import { Gallery4Demo } from "./ServiceSection";
 
 export default function Home() {
   return (
@@ -20,6 +21,7 @@ export default function Home() {
       <CardHoverEffectDemo />
       <Feature108Demo />
       <DoctorsSection />
+      <Gallery4Demo />
       <FeaturedProducts />
       <BlogSection />
       <TestimonialsSectionDemo />

@@ -40,6 +40,8 @@ export interface Pharmacy {
   nom: string;
   docPermis: string; // URL ou chemin du fichier
   docAutorisation: string; // URL ou chemin du fichier
+  pharmacie_image: string; // URL ou chemin du fichier
+
 }
 
 // Types spécifiques pour les données partielles envoyées au backend
@@ -48,7 +50,7 @@ export interface UtilisateurData {
   prenom: string;
   email: string;
   telephone: string;
-  image?: string;
+  image?: File;
   role: string;
 }
 
@@ -63,16 +65,18 @@ export interface AdresseData {
 }
 
 export interface PharmacienData {
-  cartePro?: string;
-  diplome?: string;
-  assurancePro?: string;
+  cartePro?: File;
+  diplome?: File;
+  assurancePro?: File;
   etat: boolean;
 }
 
 export interface PharmacieData {
   nom: string;
-  docPermis?: string;
-  docAutorisation?: string;
+  docPermis?: File;
+  docAutorisation?: File;
+  pharmacie_image?: File;
+
 }
 
 // Interfaces pour les réponses API
@@ -271,10 +275,50 @@ export async function fetchPharmacy(userId: number): Promise<Pharmacy> {
       nom: pharmacyData.nom || "",
       docPermis: pharmacyData.docPermis || "",
       docAutorisation: pharmacyData.docAutorisation || "",
+      pharmacie_image: pharmacyData.pharmacie_image || "",
+
     };
   } catch (error) {
     console.error("Error fetching pharmacy:", error);
     throw error instanceof Error ? error : new Error("Unknown error fetching pharmacy");
+  }
+}
+// In lib/services/profile/userservice.ts
+//dicactiver
+interface DeactivateApiResponse {
+  success: boolean;
+  data?: { pharmacien?: Pharmacien; parapharmacie?: any }; // Adjust based on your backend response
+  message?: string;
+}
+
+export async function deactivateUser(userId: number): Promise<void> {
+  try {
+    if (isNaN(userId) || userId <= 0) {
+      throw new Error("Invalid userId provided");
+    }
+
+    const response = await apiClient.put<DeactivateApiResponse>(
+      `/users/users/deactivate/${userId}`,
+      {},
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
+
+    console.log("Deactivate response (deactivateUser):", {
+      status: response.status,
+      data: response.data,
+    });
+
+    if (!response.data || !response.data.success) {
+      throw new Error(`Failed to deactivate user: ${response.data?.message || "Unknown error"}`);
+    }
+  } catch (error) {
+    console.error("Error deactivating user:", error);
+    throw error instanceof Error ? error : new Error("Unknown error deactivating user");
   }
 }
 
@@ -283,10 +327,10 @@ export async function fetchPharmacy(userId: number): Promise<Pharmacy> {
 export async function updateUserProfile(
   userId: number,
   data: {
-    utilisateurData: Partial<UtilisateurData>;
-    adresseData: Partial<AdresseData>;
-    pharmacienData: Partial<PharmacienData>;
-    pharmacieData: Partial<PharmacieData>;
+    utilisateur: Partial<UtilisateurData>;
+    adresse?: Partial<AdresseData>; // Made optional to reflect payload reality
+    pharmacien: Partial<PharmacienData>;
+    pharmacie: Partial<PharmacieData>;
   }
 ): Promise<User> {
   try {
@@ -294,15 +338,62 @@ export async function updateUserProfile(
       throw new Error("Invalid userId provided");
     }
 
-    const response = await apiClient.put<UpdateApiResponse>(
-      `/users/users/edit/${userId}`,
-      data,
-      {
-        headers: {
-          Accept: "application/json",
-        },
+    const hasFiles =
+      data.utilisateur.image ||
+      data.pharmacien.cartePro ||
+      data.pharmacien.diplome ||
+      data.pharmacien.assurancePro ||
+      data.pharmacie.docPermis ||
+      data.pharmacie.docAutorisation ||
+      data.pharmacie.pharmacie_image;
+
+    let response;
+    if (hasFiles) {
+      const formData = new FormData();
+
+      // Append utilisateur fields
+      if (data.utilisateur.nom) formData.append("utilisateur.nom", data.utilisateur.nom);
+      if (data.utilisateur.prenom) formData.append("utilisateur.prenom", data.utilisateur.prenom);
+      if (data.utilisateur.telephone) formData.append("utilisateur.telephone", data.utilisateur.telephone);
+      if (data.utilisateur.image) formData.append("utilisateur.image", data.utilisateur.image);
+
+      // Append adresse fields only if provided
+      if (data.adresse) {
+        if (data.adresse.num_street) formData.append("adresse.num_street", data.adresse.num_street);
+        if (data.adresse.street) formData.append("adresse.street", data.adresse.street);
+        if (data.adresse.city) formData.append("adresse.city", data.adresse.city);
+        if (data.adresse.postal_code) formData.append("adresse.postal_code", data.adresse.postal_code);
+        if (data.adresse.country) formData.append("adresse.country", data.adresse.country);
+        if (data.adresse.latitude) formData.append("adresse.latitude", data.adresse.latitude);
+        if (data.adresse.longitude) formData.append("adresse.longitude", data.adresse.longitude);
       }
-    );
+
+      // Append pharmacien fields
+      if (data.pharmacien.cartePro) formData.append("pharmacien.cartePro", data.pharmacien.cartePro);
+      if (data.pharmacien.diplome) formData.append("pharmacien.diplome", data.pharmacien.diplome);
+      if (data.pharmacien.assurancePro) formData.append("pharmacien.assurancePro", data.pharmacien.assurancePro);
+      // Append pharmacie fields
+      if (data.pharmacie.nom) formData.append("pharmacie.nom", data.pharmacie.nom);
+      if (data.pharmacie.docPermis) formData.append("pharmacie.docPermis", data.pharmacie.docPermis);
+      if (data.pharmacie.docAutorisation) formData.append("pharmacie.docAutorisation", data.pharmacie.docAutorisation);
+      if (data.pharmacie.pharmacie_image ) formData.append("pharmacie.pharmacie_image", data.pharmacie.pharmacie_image);
+
+      response = await apiClient.put<UpdateApiResponse>(`/users/users/edit/${userId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    } else {
+      const jsonData = {
+        utilisateur: data.utilisateur,
+        ...(data.adresse && { adresse: data.adresse }), // Include adresse only if provided
+        pharmacien: data.pharmacien,
+        pharmacie: data.pharmacie,
+      };
+
+      response = await apiClient.put<UpdateApiResponse>(`/users/users/edit/${userId}`, jsonData, {
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+      });
+    }
+
     console.log("Update response (updateUserProfile):", {
       status: response.status,
       data: response.data,
@@ -312,7 +403,6 @@ export async function updateUserProfile(
       throw new Error(`Failed to update user profile: ${response.data?.message || "Unknown error"}`);
     }
 
-    // Handle different possible response structures
     let updatedUser: User;
     if (response.data.data) {
       updatedUser = response.data.data as User;
@@ -322,21 +412,20 @@ export async function updateUserProfile(
       throw new Error("No updated user data returned from API");
     }
 
-    // Ensure adresse is included if present in the response
-    if (response.data.data?.adresse || response.data.user?.adresse) {
-      updatedUser.adresse = response.data.data?.adresse || response.data.user?.adresse;
+    // Fetch current user data to compare adresse if needed
+    const currentUser = await fetchUserById(userId);
+    if (data.adresse && response.data.data?.adresse) {
+      updatedUser.adresse = response.data.data.adresse;
+    } else {
+      updatedUser.adresse = currentUser.adresse; // Preserve existing adresse if no update
     }
 
     return updatedUser;
   } catch (error) {
     console.error("Error updating user profile:", error);
-    if (error instanceof Error && (error as any).response && (error as any).response.data) {
-      console.error("Backend validation errors:", (error as any).response.data);
-      throw new Error(`Update user profile error: ${JSON.stringify((error as any).response.data)}`);
-    }
     throw error instanceof Error ? error : new Error("Unknown error updating user profile");
   }
-} 
+}
 interface DeleteApiResponse {
   success: boolean;
   message?: string;

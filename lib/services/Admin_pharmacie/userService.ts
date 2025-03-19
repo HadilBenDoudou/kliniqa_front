@@ -1,7 +1,7 @@
 // lib/services/Admin_pharmacie/userService.ts
 import apiClient from '../../api-client';
 
-interface User {
+export interface User {
   id: number;
   nom: string;
   prenom: string;

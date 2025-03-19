@@ -10,15 +10,17 @@ interface AuthResponse {
   data: {
     message: string;
     userId?: number;
+    role:string;
     token?: string;
   };
 }
 
-export const signupUser = async (formData: FormData): Promise<AuthResponse> => {
+export const signupUser = async (formData: FormData, recaptchaToken?: string): Promise<any> => {
   try {
-    const response = await apiClient.post<AuthResponse>("/auth/register", formData, {
+    const response = await apiClient.post("/auth/register", formData, {
       headers: {
-        "Content-Type": "multipart/form-data", // Optional, FormData should set this
+        "Content-Type": "multipart/form-data",
+        "X-Recaptcha-Token": recaptchaToken || "", // Ajoutez le token reCAPTCHA dans l'en-tête
       },
     });
     return response.data;
@@ -47,7 +49,7 @@ export const verifyResetPassword = async (userId: number, otp: string, newPasswo
 
 export const loginUser = async ({ email, password }: { email: string; password: string }) => {
   const response = await apiClient.post<{ success: boolean; data: {
-    userID: any; session: any; message: string; userId: number 
+    userID: any; session: any; message: string; userId: number ; role: string, 
 } }>(
     "/auth/login",
     { email, password }

@@ -1,5 +1,5 @@
-import { signupSchema } from "./validation/schemas";
 import { z } from "zod";
+import { signupSchema } from "./validation/schemas";
 
 export const validateField = (
   section: string,
@@ -24,7 +24,7 @@ export const validateField = (
 export const validateStep = (
   step: number,
   formData: any,
-  role: "utilisateur" | "pharmacien",
+  role: "utilisateur" | "pharmacien" | "parapharmacie",
   setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>
 ) => {
   const stepErrors: Record<string, string> = {};
@@ -85,6 +85,23 @@ export const validateStep = (
       if (err instanceof z.ZodError) {
         err.errors.forEach((e) => {
           stepErrors[`pharmacie.${e.path[0]}`] = e.message;
+        });
+        isValid = false;
+      }
+    }
+  } else if (step === 3 && role === "parapharmacie") {
+    const parapharmacieSchema = signupSchema.shape.parapharmacie;
+    try {
+      parapharmacieSchema.parse({
+        nom: formData.parapharmacie.nom,
+        docPermis: formData.parapharmacie.docPermis?.name || "",
+        docAutorisation: formData.parapharmacie.docAutorisation?.name || "",
+        image: formData.parapharmacie.image?.name || "",
+      });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        err.errors.forEach((e) => {
+          stepErrors[`parapharmacie.${e.path[0]}`] = e.message;
         });
         isValid = false;
       }

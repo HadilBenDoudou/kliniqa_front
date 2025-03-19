@@ -1,9 +1,10 @@
 "use client";
+
 import React, { useEffect, useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchUserById, fetchPharmacien, fetchPharmacy, User, Adresse, Pharmacien, Pharmacy, updateUserProfile, UtilisateurData, AdresseData, PharmacieData, PharmacienData } from "@/lib/services/profile/userservice";
+import { fetchUserById, fetchPharmacien, fetchPharmacy, User, Adresse, Pharmacien, Pharmacy, updateUserProfile } from "@/lib/services/profile/userservice";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import AppLayout from "@/components/AppLayout";
+import AppLayout from "@/components/ui/administrateur/AppLayout";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -13,6 +14,7 @@ import { AddressSection } from "./AddressSection";
 import { PharmacistInfoSection } from "./PharmacistInfoSection";
 import { PharmacyInfoSection } from "./PharmacyInfoSection";
 import { ProfileSidebar } from "./ProfileSidebar";
+import { motion } from "framer-motion";
 
 export default function Profile() {
   const router = useRouter();
@@ -46,8 +48,16 @@ export default function Profile() {
       nom: "",
       docPermis: null as File | null,
       docAutorisation: null as File | null,
+      pharmacie_image: null as File | null,
     },
   });
+
+  const box = {
+    width: 20,
+    height: 20,
+    backgroundColor: "#2d2dc1",
+    borderRadius: 5,
+  };
 
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId");
@@ -76,23 +86,23 @@ export default function Profile() {
     retry: 1,
   });
 
-  const { data: pharmacien, isLoading: pharmacienLoading, error: pharmacienError } = useQuery<Pharmacien>({
+  const { data: pharmacien, isLoading: pharmacienLoading } = useQuery<Pharmacien>({
     queryKey: userId ? ["pharmacien", userId] : ["pharmacien"],
     queryFn: async () => {
       if (!userId) throw new Error("User ID is null");
       return fetchPharmacien(userId);
     },
-    enabled: !!userId && userId > 0,
+    enabled: !!userId && userId > 0 && (user?.role === "pharmacien"),
     retry: 1,
   });
 
-  const { data: pharmacie, isLoading: pharmacieLoading, error: pharmacieError } = useQuery<Pharmacy>({
+  const { data: pharmacie, isLoading: pharmacieLoading } = useQuery<Pharmacy>({
     queryKey: userId ? ["pharmacie", userId] : ["pharmacie"],
     queryFn: async () => {
       if (!userId) throw new Error("User ID is null");
       return fetchPharmacy(userId);
     },
-    enabled: !!userId && userId > 0,
+    enabled: !!userId && userId > 0 && (user?.role === "pharmacien" || user?.role === "parapharmacien"),
     retry: 1,
   });
 
@@ -121,11 +131,10 @@ export default function Profile() {
       setFormData((prev) => ({
         ...prev,
         pharmacien: {
-          ...prev.pharmacien,
+          cartePro: null,
           diplome: null,
           assurancePro: null,
           etat: pharmacien.etat ?? false,
-          cartePro: null,
         },
       }));
     }
@@ -136,6 +145,7 @@ export default function Profile() {
           nom: pharmacie.nom || "",
           docPermis: null,
           docAutorisation: null,
+          pharmacie_image: null,
         },
       }));
     }
@@ -187,59 +197,61 @@ export default function Profile() {
       setUpdateStatus({ success: false, message: "User ID is missing" });
       return;
     }
-  
-    const utilisateurData: Partial<UtilisateurData> = {};
-    const adresseData: Partial<AdresseData> = {};
-    const pharmacienData: Partial<PharmacienData> = {};
-    const pharmacieData: Partial<PharmacieData> = {};
-  
-    // Only include changed fields for utilisateurData
-    if (formData.nom && formData.nom !== user?.nom) utilisateurData.nom = formData.nom;
-    if (formData.prenom && formData.prenom !== user?.prenom) utilisateurData.prenom = formData.prenom;
-    if (formData.email && formData.email !== user?.email) utilisateurData.email = formData.email;
-    if (formData.telephone && formData.telephone !== user?.telephone) utilisateurData.telephone = formData.telephone;
-    if (formData.role && formData.role !== user?.role) utilisateurData.role = formData.role;
-    if (formData.image) utilisateurData.image = formData.image.name; // or use a method to convert the file to a string
-  
-    // Only include changed fields for adresseData
-    if (formData.adresse.num_street && formData.adresse.num_street !== user?.adresse?.num_street) adresseData.num_street = formData.adresse.num_street;
-    if (formData.adresse.street && formData.adresse.street !== user?.adresse?.street) adresseData.street = formData.adresse.street;
-    if (formData.adresse.city && formData.adresse.city !== user?.adresse?.city) adresseData.city = formData.adresse.city;
-    if (formData.adresse.postal_code && formData.adresse.postal_code !== user?.adresse?.postal_code) adresseData.postal_code = formData.adresse.postal_code;
-    if (formData.adresse.country && formData.adresse.country !== user?.adresse?.country) adresseData.country = formData.adresse.country;
-    if (formData.adresse.latitude && formData.adresse.latitude !== user?.adresse?.latitude) adresseData.latitude = formData.adresse.latitude.toString();
-    if (formData.adresse.longitude && formData.adresse.longitude !== user?.adresse?.longitude) adresseData.longitude = formData.adresse.longitude.toString();
-  
-    // Only include changed fields for pharmacienData
-    if (formData.pharmacien.cartePro) pharmacienData.cartePro = formData.pharmacien.cartePro.name; // or use a method to convert the file to a string
-    if (formData.pharmacien.diplome) pharmacienData.diplome = formData.pharmacien.diplome.name;
-    if (formData.pharmacien.assurancePro) pharmacienData.assurancePro = formData.pharmacien.assurancePro.name;
-    if (formData.pharmacien.etat !== undefined && formData.pharmacien.etat !== pharmacien?.etat) pharmacienData.etat = formData.pharmacien.etat;
-  
-    // Only include changed fields for pharmacieData
-    if (formData.pharmacie.nom && formData.pharmacie.nom !== pharmacie?.nom) pharmacieData.nom = formData.pharmacie.nom;
-    if (formData.pharmacie.docPermis) pharmacieData.docPermis = formData.pharmacie.docPermis.name;
-    if (formData.pharmacie.docAutorisation) pharmacieData.docAutorisation = formData.pharmacie.docAutorisation.name;
-  
-    const payload = {
-      utilisateurData,
-      adresseData,
-      pharmacienData,
-      pharmacieData,
-    };
-  
+
+    const utilisateur: Partial<any> = {};
+    const adresse: Partial<any> = {};
+    const pharmacien: Partial<any> = {};
+    const pharmacie: Partial<any> = {};
+
+    if (formData.nom !== user?.nom) utilisateur.nom = formData.nom;
+    if (formData.prenom !== user?.prenom) utilisateur.prenom = formData.prenom;
+    if (formData.telephone !== user?.telephone) utilisateur.telephone = formData.telephone;
+    if (formData.image) utilisateur.image = formData.image;
+
+    if (user?.adresse) {
+      if (formData.adresse.num_street && formData.adresse.num_street !== user.adresse.num_street)
+        adresse.num_street = formData.adresse.num_street;
+      if (formData.adresse.street && formData.adresse.street !== user.adresse.street)
+        adresse.street = formData.adresse.street;
+      if (formData.adresse.city && formData.adresse.city !== user.adresse.city)
+        adresse.city = formData.adresse.city;
+      if (formData.adresse.postal_code && formData.adresse.postal_code !== user.adresse.postal_code)
+        adresse.postal_code = formData.adresse.postal_code;
+      if (formData.adresse.country && formData.adresse.country !== user.adresse.country)
+        adresse.country = formData.adresse.country;
+      if (formData.adresse.latitude && formData.adresse.latitude !== user.adresse.latitude)
+        adresse.latitude = formData.adresse.latitude?.toString();
+      if (formData.adresse.longitude && formData.adresse.longitude !== user.adresse.longitude)
+        adresse.longitude = formData.adresse.longitude?.toString();
+    }
+
+    if (formData.pharmacien.cartePro) pharmacien.cartePro = formData.pharmacien.cartePro;
+    if (formData.pharmacien.diplome) pharmacien.diplome = formData.pharmacien.diplome;
+    if (formData.pharmacien.assurancePro) pharmacien.assurancePro = formData.pharmacien.assurancePro;
+    pharmacien.etat = formData.pharmacien.etat;
+
+    if (formData.pharmacie.nom && formData.pharmacie.nom !== pharmacie?.nom) pharmacie.nom = formData.pharmacie.nom;
+    if (formData.pharmacie.docPermis) pharmacie.docPermis = formData.pharmacie.docPermis;
+    if (formData.pharmacie.docAutorisation) pharmacie.docAutorisation = formData.pharmacie.docAutorisation;
+    if (formData.pharmacie.pharmacie_image) pharmacie.pharmacie_image = formData.pharmacie.pharmacie_image;
+
+    const payload: any = { utilisateur, pharmacien, pharmacie };
+    if (Object.keys(adresse).length > 0) {
+      payload.adresse = adresse;
+    }
+
     console.log("Payload to send:", payload);
-  
+
     try {
       const updatedUser = await updateUserProfile(userId, payload);
       setUpdateStatus({ success: true, message: "Profile updated successfully!" });
       setIsEditing(false);
-  
+
       queryClient.invalidateQueries({ queryKey: ["user", userId] });
       queryClient.invalidateQueries({ queryKey: ["adresse", userId] });
       queryClient.invalidateQueries({ queryKey: ["pharmacien", userId] });
       queryClient.invalidateQueries({ queryKey: ["pharmacie", userId] });
-  
+
       setFormData((prev) => ({
         ...prev,
         nom: updatedUser.nom,
@@ -247,20 +259,14 @@ export default function Profile() {
         email: updatedUser.email,
         telephone: updatedUser.telephone,
         role: updatedUser.role,
-        image: null,
         adresse: updatedUser.adresse || prev.adresse,
-        pharmacien: {
-          ...prev.pharmacien,
-          cartePro: null,
-          diplome: null,
-          assurancePro: null,
-          etat: pharmacien?.etat ?? prev.pharmacien.etat,
-        },
+        pharmacien: { ...prev.pharmacien, etat: pharmacien?.etat ?? prev.pharmacien.etat },
         pharmacie: {
           ...prev.pharmacie,
           nom: pharmacie?.nom || prev.pharmacie.nom,
           docPermis: null,
           docAutorisation: null,
+          pharmacie_image: null,
         },
       }));
     } catch (error) {
@@ -271,47 +277,66 @@ export default function Profile() {
       });
     }
   };
+
   if (userLoading || pharmacienLoading || pharmacieLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <p className="text-gray-600 dark:text-gray-300">Loading profile...</p>
-      </div>
+      <SidebarProvider>
+        <AppLayout>
+          <SidebarInset>
+            <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+              <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Loading Profile...</h1>
+              <div className="flex justify-center items-center h-64">
+                <motion.div
+                  animate={{
+                    scale: [1, 2, 2, 1, 1],
+                    rotate: [0, 0, 180, 180, 0],
+                    borderRadius: ["0%", "0%", "50%", "50%", "0%"],
+                  }}
+                  transition={{
+                    duration: 2,
+                    ease: "easeInOut",
+                    times: [0, 0.2, 0.5, 0.8, 1],
+                    repeat: Infinity,
+                    repeatDelay: 1,
+                  }}
+                  style={box}
+                />
+              </div>
+            </div>
+          </SidebarInset>
+        </AppLayout>
+      </SidebarProvider>
     );
   }
 
   if (userError) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <p className="text-red-600 dark:text-red-400">Error loading profile: {userError.message}. Please try logging in again.</p>
-        <Button
-          onClick={() => {
-            localStorage.removeItem("userId");
-            window.location.href = "/login";
-          }}
-          className="ml-4 bg-red-600 text-white hover:bg-red-700 shadow-md hover:shadow-lg transition-shadow duration-200"
-        >
-          <LogOut className="mr-2 size-4" /> Logout
-        </Button>
-      </div>
+      <SidebarProvider>
+        <AppLayout>
+          <SidebarInset>
+            <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+              <p className="text-red-500 mb-4">Error loading profile: {userError.message}</p>
+              <Button onClick={() => { localStorage.removeItem("userId"); window.location.href = "/login"; }}>
+                <LogOut /> Logout
+              </Button>
+            </div>
+          </SidebarInset>
+        </AppLayout>
+      </SidebarProvider>
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <p className="text-red-600 dark:text-red-400">No user data available. Please try logging in again.</p>
-        <Button
-          onClick={() => {
-            localStorage.removeItem("userId");
-            window.location.href = "/login";
-          }}
-          className="ml-4 bg-red-600 text-white hover:bg-red-700 shadow-md hover:shadow-lg transition-shadow duration-200"
-        >
-          <LogOut className="mr-2 size-4" /> Logout
-        </Button>
-      </div>
-    );
-  }
+  if (!user) return (
+    <SidebarProvider>
+      <AppLayout>
+        <SidebarInset>
+          <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+            <div className="text-gray-500">No user data available.</div>
+          </div>
+        </SidebarInset>
+      </AppLayout>
+    </SidebarProvider>
+  );
 
   return (
     <SidebarProvider>
@@ -331,13 +356,7 @@ export default function Profile() {
                   user={user}
                   isEditing={isEditing}
                   onEditToggle={() => setIsEditing(!isEditing)}
-                  formData={{
-                    nom: formData.nom,
-                    prenom: formData.prenom,
-                    telephone: formData.telephone,
-                    role: formData.role,
-                    image: formData.image,
-                  }}
+                  formData={{ nom: formData.nom, prenom: formData.prenom, telephone: formData.telephone, role: formData.role, image: formData.image }}
                   onInputChange={handleInputChange}
                   onSubmit={handleSubmit}
                 />
@@ -345,10 +364,7 @@ export default function Profile() {
                   user={user}
                   isEditing={isEditing}
                   onEditToggle={() => setIsEditing(!isEditing)}
-                  formData={{
-                    email: formData.email,
-                    telephone: formData.telephone,
-                  }}
+                  formData={{ email: formData.email, telephone: formData.telephone }}
                   onInputChange={handleInputChange}
                   onSubmit={handleSubmit}
                 />
@@ -356,35 +372,33 @@ export default function Profile() {
                   user={user}
                   isEditing={isEditing}
                   onEditToggle={() => setIsEditing(!isEditing)}
-                  formData={{
-                    adresse: formData.adresse,
-                  }}
+                  formData={{ adresse: formData.adresse }}
                   onInputChange={handleInputChange}
                   onSubmit={handleSubmit}
                   updateFormData={updateFormData}
                 />
-                <PharmacistInfoSection
-                  user={user}
-                  isEditing={isEditing}
-                  onEditToggle={() => setIsEditing(!isEditing)}
-                  formData={{
-                    pharmacien: formData.pharmacien,
-                  }}
-                  onInputChange={handleInputChange}
-                  onSubmit={handleSubmit}
-                  pharmacien={pharmacien}
-                />
-                <PharmacyInfoSection
-                  user={user}
-                  isEditing={isEditing}
-                  onEditToggle={() => setIsEditing(!isEditing)}
-                  formData={{
-                    pharmacie: formData.pharmacie,
-                  }}
-                  onInputChange={handleInputChange}
-                  onSubmit={handleSubmit}
-                  pharmacie={pharmacie}
-                />
+                {user.role === "pharmacien" && (
+                  <PharmacistInfoSection
+                    user={user}
+                    isEditing={isEditing}
+                    onEditToggle={() => setIsEditing(!isEditing)}
+                    formData={{ pharmacien: formData.pharmacien }}
+                    onInputChange={handleInputChange}
+                    onSubmit={handleSubmit}
+                    pharmacien={pharmacien}
+                  />
+                )}
+                {(user.role === "pharmacien" || user.role === "parapharmacien") && (
+                  <PharmacyInfoSection
+                    user={user}
+                    isEditing={isEditing}
+                    onEditToggle={() => setIsEditing(!isEditing)}
+                    formData={{ pharmacie: formData.pharmacie }}
+                    onInputChange={handleInputChange}
+                    onSubmit={handleSubmit}
+                    pharmacie={pharmacie}
+                  />
+                )}
               </div>
             </div>
           </div>

@@ -10,7 +10,7 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
-import { data } from "@/components/app-sidebar"; // Import data from AppSidebar
+import { data } from "@/components/ui/administrateur/app-sidebar"; // Import data from AppSidebar
 
 type BreadcrumbItemType = {
   label: string;

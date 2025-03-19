@@ -138,7 +138,64 @@
   }
 }
 
-/* Ensure the animation class uses it */
-.animate-marquee {
-  animation: marquee var(--duration) linear infinite;
+/* styles.css or a global stylesheet */
+/* styles.css */
+.custom-checkbox[data-state="checked"] {
+  background-color: #2d2dc1 !important; /* blue-600 */
+  border-color: #2d2dc1 !important;
+}
+
+.custom-checkbox[data-state="checked"] svg {
+  color: white !important; /* Force the checkmark to black */
+  stroke: white !important; /* For SVGs using stroke */
+}
+
+.custom-checkbox[data-state="unchecked"] {
+  border-color: #d1d5db !important; /* gray-300 */
+  background-color: white !important;
+}
+@media (max-width: 768px) {
+  .bg-gradient-to-r {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+
+
+/* styles/globals.css */
+@layer components {
+  .ql-toolbar.ql-snow {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9f9f9;
+  }
+
+  .ql-container.ql-snow {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border: 1px solid #e5e7eb;
+    height: 100px; /* Adjust height to match the design */
+  }
+
+  .ql-editor {
+    min-height: 100px;
+    font-size: 14px;
+    color: #333;
+  }
+
+  .ql-toolbar .ql-formats {
+    margin-right: 10px;
+  }
+
+  .ql-toolbar button,
+  .ql-toolbar .ql-picker {
+    color: #333;
+  }
+
+  .ql-toolbar button:hover,
+  .ql-toolbar .ql-picker:hover {
+    color: #6b48ff;
+  }
 }

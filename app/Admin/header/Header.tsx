@@ -4,7 +4,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumb } from "@/components/breadcrumb";
 import dynamic from "next/dynamic";
-import AppSidebar from "@/components/app-sidebar";
+import AppSidebar from "@/components/ui/administrateur/app-sidebar";
 
 const ThemeToggle = dynamic(() => import("@/components/ui/ThemeToggle"), { ssr: false });
 const NotificationButton = dynamic(() => import("@/components/ui/notifications"), { ssr: false });

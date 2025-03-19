@@ -1,6 +1,7 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
-import { fetchUserById, User } from "@/lib/services/profile/userservice";
+
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchUserById, User, fetchPharmacien, Pharmacien } from "@/lib/services/profile/userservice";
 import { LogOut, ChevronsUpDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -20,10 +21,34 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { logoutUser } from "@/lib/services/auth/authService";
 
+// CSS styles for the animated loading bar
+const loadingBarStyles = `
+  .loading-bar-container {
+    width: 100%;
+    height: 4px;
+    background-color: #e5e7eb; /* gray-200 */
+    border-radius: 2px;
+    overflow: hidden;
+    margin-left: 8px;
+  }
+  .loading-bar {
+    height: 100%;
+    background-color: #4b5563; /* gray-600 */
+    animation: loading 2s infinite ease-in-out;
+  }
+  @keyframes loading {
+    0% { width: 0%; }
+    50% { width: 80%; }
+    100% { width: 0%; }
+  }
+`;
+
 export function NavUser() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [userId, setUserId] = useState<number | null>(null);
 
+  // Fetch userId from localStorage
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId");
     console.log("Stored userId:", storedUserId);
@@ -33,13 +58,25 @@ export function NavUser() {
     }
   }, []);
 
-  const { data: user, isLoading, error } = useQuery<User>({
+  // Fetch user data
+  const { data: user, isLoading: userLoading, error: userError } = useQuery<User>({
     queryKey: userId ? ["user", userId] : ["user"],
     queryFn: async () => {
       if (!userId) throw new Error("User ID is null");
       return fetchUserById(userId);
     },
     enabled: !!userId && userId > 0,
+    retry: 1,
+  });
+
+  // Fetch pharmacist data (only if role is "pharmacien")
+  const { data: pharmacien, isLoading: pharmacienLoading, error: pharmacienError } = useQuery<Pharmacien>({
+    queryKey: userId && user?.role === "pharmacien" ? ["pharmacien", userId] : ["pharmacien"],
+    queryFn: async () => {
+      if (!userId) throw new Error("User ID is null");
+      return fetchPharmacien(userId);
+    },
+    enabled: !!userId && userId > 0 && user?.role === "pharmacien",
     retry: 1,
   });
 
@@ -52,12 +89,14 @@ export function NavUser() {
       localStorage.removeItem("userId");
       document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       setUserId(null);
+      queryClient.clear(); // Clear query cache on logout
       router.push("/login");
     } catch (error) {
       console.error("Logout failed:", error);
       localStorage.removeItem("userId");
       document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       setUserId(null);
+      queryClient.clear();
       router.push("/login");
     }
   };
@@ -67,6 +106,7 @@ export function NavUser() {
   };
 
   console.log("User data in NavUser:", user);
+  console.log("Pharmacien data in NavUser:", pharmacien);
 
   if (!userId) {
     return (
@@ -85,22 +125,27 @@ export function NavUser() {
     );
   }
 
-  if (isLoading) {
+  if (userLoading || (user?.role === "pharmacien" && pharmacienLoading)) {
     return (
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton size="lg" className="text-gray-600 shadow-md">
-            <Avatar className="h-8 w-8 shadow-sm">
-              <AvatarFallback className="bg-gray-200 text-gray-600">L</AvatarFallback>
-            </Avatar>
-            <span className="ml-2 text-sm font-medium">Loading...</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
+      <>
+        <style>{loadingBarStyles}</style>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" className="flex items-center gap-2 text-gray-600 shadow-md">
+              <Avatar className="h-8 w-8 shadow-sm">
+                <AvatarFallback className="bg-gray-200 text-gray-600">L</AvatarFallback>
+              </Avatar>
+              <div className="loading-bar-container">
+                <div className="loading-bar"></div>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </>
     );
   }
 
-  if (error || !user) {
+  if (userError || (user?.role === "pharmacien" && pharmacienError)) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
@@ -109,7 +154,23 @@ export function NavUser() {
             className="text-red-600 hover:text-red-800 shadow-md hover:shadow-lg transition-shadow duration-200"
             onClick={handleLogout}
           >
-            <span className="text-sm font-medium">Error loading user - Click to logout</span>
+            <span className="text-sm font-medium">Error loading data - Click to logout</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            size="lg"
+            className="text-red-600 hover:text-red-800 shadow-md hover:shadow-lg transition-shadow duration-200"
+            onClick={handleLogout}
+          >
+            <span className="text-sm font-medium">No user data - Click to logout</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -122,6 +183,9 @@ export function NavUser() {
       : "?";
   };
 
+  // Check if user is a pharmacien with etat false
+  const isInvalidPharmacien = user.role === "pharmacien" && pharmacien && !pharmacien.etat;
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -129,24 +193,40 @@ export function NavUser() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="flex items-center gap-2 rounded-md p-2 hover:bg-gray-100 transition-colors duration-200 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-900 shadow-md hover:shadow-lg"
+              className={`flex items-center gap-2 rounded-md p-2 transition-colors duration-200 shadow-md hover:shadow-lg ${
+                isInvalidPharmacien
+                  ? "bg-red-100 text-red-900 hover:bg-red-200 data-[state=open]:bg-red-200 data-[state=open]:text-red-900"
+                  : "hover:bg-gray-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-900"
+              }`}
             >
               <Avatar className="h-8 w-8 shadow-sm">
                 {user.image ? (
                   <AvatarImage src={user.image} alt={`${user.nom} ${user.prenom}`} className="rounded-full" />
                 ) : (
-                  <AvatarFallback className="bg-blue-100 text-blue-800">{getInitials()}</AvatarFallback>
+                  <AvatarFallback
+                    className={isInvalidPharmacien ? "bg-red-200 text-red-800" : "bg-blue-100 text-blue-800"}
+                  >
+                    {getInitials()}
+                  </AvatarFallback>
                 )}
               </Avatar>
               <div className="flex-1 text-left">
-                <span className="block text-sm font-medium text-gray-900 truncate">
-                  {user.nom && user.prenom ? `${user.nom} ${user.prenom}` : "Utilisateur"}
+                <span
+                  className={`block text-sm font-medium truncate ${
+                    isInvalidPharmacien ? "text-red-900" : "text-gray-900"
+                  }`}
+                >
+                  {user.nom && user.prenom ? `${user.nom} ${user.prenom}` : "User"}
                 </span>
-                <span className="block text-xs text-gray-500 truncate">
-                  {user.email || "Email non disponible"}
+                <span
+                  className={`block text-xs truncate ${
+                    isInvalidPharmacien ? "text-red-700" : "text-gray-500"
+                  }`}
+                >
+                  {isInvalidPharmacien ? "Invalid Account - Must Validate Account" : user.email || "No email available"}
                 </span>
               </div>
-              <ChevronsUpDown className="ml-2 size-4 text-gray-500" />
+              <ChevronsUpDown className={`ml-2 size-4 ${isInvalidPharmacien ? "text-red-700" : "text-gray-500"}`} />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -154,21 +234,37 @@ export function NavUser() {
             align="end"
             sideOffset={8}
           >
-            <DropdownMenuLabel className="p-2 text-sm font-medium text-gray-900 shadow-inner">
+            <DropdownMenuLabel
+              className={`p-2 text-sm font-medium shadow-inner ${
+                isInvalidPharmacien ? "bg-red-50 text-red-900" : "text-gray-900"
+              }`}
+            >
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8 shadow-sm">
                   {user.image ? (
                     <AvatarImage src={user.image} alt={`${user.nom} ${user.prenom}`} className="rounded-full" />
                   ) : (
-                    <AvatarFallback className="bg-blue-100 text-blue-800">{getInitials()}</AvatarFallback>
+                    <AvatarFallback
+                      className={isInvalidPharmacien ? "bg-red-200 text-red-800" : "bg-blue-100 text-blue-800"}
+                    >
+                      {getInitials()}
+                    </AvatarFallback>
                   )}
                 </Avatar>
                 <div>
-                  <span className="block text-sm font-medium text-gray-900">
-                    {user.nom && user.prenom ? `${user.nom} ${user.prenom}` : "Utilisateur"}
+                  <span
+                    className={`block text-sm font-medium ${
+                      isInvalidPharmacien ? "text-red-900" : "text-gray-900"
+                    }`}
+                  >
+                    {user.nom && user.prenom ? `${user.nom} ${user.prenom}` : "User"}
                   </span>
-                  <span className="block text-xs text-gray-500">
-                    {user.email || "Email non disponible"}
+                  <span
+                    className={`block text-xs ${
+                      isInvalidPharmacien ? "text-red-700" : "text-gray-500"
+                    }`}
+                  >
+                    {isInvalidPharmacien ? "Invalid Account" : user.email || "No email available"}
                   </span>
                 </div>
               </div>

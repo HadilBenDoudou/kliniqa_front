@@ -1,55 +1,50 @@
 import { Layout, Pointer, Zap } from "lucide-react";
-
 import { Feature108 } from "@/components/ui/trust/shadcnblocks-com-feature108";
 
 const demoData = {
-  badge: "shadcnblocks.com",
-  heading: "A Collection of Components Built With Shadcn & Tailwind",
-  description: "Join us to build flawless web solutions.",
+  heading: "Digital Solutions for Healthcare and Medicine",
+  description: "Partner with us to revolutionize healthcare with modern digital tools.",
   tabs: [
     {
       value: "tab-1",
       icon: <Zap className="h-auto w-4 shrink-0" />,
-      label: "Boost Revenue",
+      label: "Clinical Efficiency",
       content: {
-        badge: "Modern Tactics",
-        title: "Make your site a true standout.",
+        badge: "Modern Technologies",
+        title: "Enhance Your Healthcare Services.",
         description:
-          "Discover new web trends that help you craft sleek, highly functional sites that drive traffic and convert leads into customers.",
-        buttonText: "See Plans",
-        imageSrc:
-          "/trust/Group 8 (1).png",
-        imageAlt: "placeholder",
+          "Leverage cutting-edge digital innovations to build efficient medical platforms that streamline patient management and boost clinical outcomes.",
+        buttonText: "View Plans",
+        imageSrc: "/trust/Group 8 (1).png",
+        imageAlt: "Clinical Efficiency Solution",
       },
     },
     {
       value: "tab-2",
       icon: <Pointer className="h-auto w-4 shrink-0" />,
-      label: "Higher Engagement",
+      label: "Patient Engagement",
       content: {
-        badge: "Expert Features",
-        title: "Boost your site with top-tier design.",
+        badge: "Advanced Features",
+        title: "Strengthen Patient Connections.",
         description:
-          "Use stellar design to easily engage users and strengthen their loyalty. Create a seamless experience that keeps them coming back for more.",
-        buttonText: "See Tools",
-        imageSrc:
-          "/trust/Group 8 (1).png",
-        imageAlt: "placeholder",
+          "Provide an intuitive and functional design to improve access to healthcare services, retain patients, and ensure a seamless and engaging experience.",
+        buttonText: "Explore Tools",
+        imageSrc: "/trust/jeshoots-com-l0j0DHVWcIE-unsplash.jpg",
+        imageAlt: "Patient Engagement",
       },
     },
     {
       value: "tab-3",
       icon: <Layout className="h-auto w-4 shrink-0" />,
-      label: "Stunning Layouts",
+      label: "Intuitive Management",
       content: {
-        badge: "Elite Solutions",
-        title: "Build an advanced web experience.",
+        badge: "Healthcare Solutions",
+        title: "Develop Advanced Medical Management.",
         description:
-          "Lift your brand with modern tech that grabs attention and drives action. Create a digital experience that stands out from the crowd.",
-        buttonText: "See Options",
-        imageSrc:
-          "/trust/Group 8 (1).png",
-        imageAlt: "placeholder",
+          "Use modern technologies to simplify the management of medical records, appointments, and resources, delivering a standout digital experience in healthcare.",
+        buttonText: "Discover Options",
+        imageSrc: "/trust/anton-8q-U8X1zkvI-unsplash.jpg",
+        imageAlt: "Intuitive Healthcare Management",
       },
     },
   ],

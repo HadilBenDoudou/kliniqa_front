@@ -28,19 +28,18 @@ export async function middleware(request: NextRequest) {
       });
       console.log("Middleware - JWT Payload:", payload);
 
-      const userRole = payload.role;
-      if (!userRole || userRole !== "authenticated") {
-        console.log("Middleware - Insufficient permissions");
-        return NextResponse.json(
-          { success: false, error: "Insufficient permissions" },
-          { status: 403 }
-        );
+      // Allow "authenticated" role as a base check, then refine with fetched role if needed
+      const jwtRole = payload.role as string;
+      if (!jwtRole || jwtRole !== "authenticated") {
+        console.log("Middleware - Invalid JWT role:", jwtRole);
+        return NextResponse.redirect(new URL("/login", request.url), 302);
       }
 
-      console.log("Middleware - Token valid, proceeding to requested route");
+      // Optionally fetch user role from API here if needed, but for now, rely on LoginPage logic
       const response = NextResponse.next();
       response.headers.set("x-user-id", payload.sub as string);
       response.headers.set("x-user-email", payload.email as string);
+      response.headers.set("x-jwt-role", jwtRole);
       return response;
     } catch (error) {
       console.error("Middleware - JWT verification failed:", error);

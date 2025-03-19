@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { z } from "zod";
 import { utilisateurSchema } from "@/lib/validation/validationSchemas";
+import TelephoneInput from "@/components/TelephoneInput";
 
 interface MyProfileSectionProps {
   user: User;
@@ -37,33 +38,32 @@ export function MyProfileSection({
     return user.nom && user.prenom ? `${user.nom[0]}${user.prenom[0]}`.toUpperCase() : "?";
   };
 
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleInput = (field: string, value: string) => {
     let newValue = value;
 
-    if (name === "telephone") {
+    if (field === "telephone") {
       newValue = value.replace(/[^\d+]/g, "");
       if (!newValue.startsWith("+")) {
         newValue = "+" + newValue.replace(/^\+/, "");
       }
     }
 
-    onInputChange(name, newValue);
+    onInputChange(field, newValue);
 
     try {
-      const partialSchema = utilisateurSchema.pick({ [name]: true } as Partial<
+      const partialSchema = utilisateurSchema.pick({ [field]: true } as Partial<
         Record<keyof typeof formData, true>
       >);
-      partialSchema.parse({ [name]: newValue });
+      partialSchema.parse({ [field]: newValue });
       setErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors[name];
+        delete newErrors[field];
         return newErrors;
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        const errorMessage = err.errors.find((e) => e.path[0] === name)?.message || "";
-        setErrors((prev) => ({ ...prev, [name]: errorMessage }));
+        const errorMessage = err.errors.find((e) => e.path[0] === field)?.message || "";
+        setErrors((prev) => ({ ...prev, [field]: errorMessage }));
       }
     }
     console.log("Errors after handleInput:", errors);
@@ -149,7 +149,7 @@ export function MyProfileSection({
                 name="nom"
                 type="text"
                 value={formData.nom}
-                onChange={handleInput}
+                onChange={(e) => handleInput("nom", e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
               />
               {errors.nom && <p className="text-red-600 text-sm mt-1">{errors.nom}</p>}
@@ -161,7 +161,7 @@ export function MyProfileSection({
                 name="prenom"
                 type="text"
                 value={formData.prenom}
-                onChange={handleInput}
+                onChange={(e) => handleInput("prenom", e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
               />
               {errors.prenom && <p className="text-red-600 text-sm mt-1">{errors.prenom}</p>}
@@ -180,17 +180,15 @@ export function MyProfileSection({
           </div>
           <div>
             <Label htmlFor="telephone">Phone</Label>
-            <Input
+            <TelephoneInput
               id="telephone"
-              name="telephone"
-              type="tel"
               value={formData.telephone}
-              onChange={handleInput}
-              placeholder="+21612345678"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              onChange={(value) => handleInput("telephone", value)}
+              required
+              disabled={false}
+              className="mt-1 block w-full"
             />
             {errors.telephone && <p className="text-red-600 text-sm mt-1">{errors.telephone}</p>}
-            <p className="text-gray-500 text-sm mt-1">Ex: +12345678 (start with + followed by 8-15 digits)</p>
           </div>
           <Button
             type="submit"

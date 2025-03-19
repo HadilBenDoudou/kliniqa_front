@@ -1,62 +1,55 @@
-import { motion } from 'framer-motion';
+import { Gallery4, Gallery4Props } from "@/public/servicesection/blocks/gallery4";
 
-const services = [
-  { name: 'Routine Check-Ups' },
-  { name: 'Prosthodontics', description: 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.' },
-  { name: 'Pediatric Dentistry' },
-  { name: 'Cosmetic Dentistry' },
-];
+const demoData: Gallery4Props = {
+  title: "Healthcare Innovations",
+  description:
+    "Discover how cutting-edge technologies and solutions are transforming the healthcare industry. These case studies highlight real-world applications that improve patient care, streamline operations, and enhance medical outcomes.",
+  items: [
+    {
+      id: "telemedicine",
+      title: "Telemedicine: Connecting Patients and Doctors",
+      description:
+        "Explore how telemedicine platforms are revolutionizing healthcare delivery by enabling remote consultations, improving access to care, and reducing the burden on physical medical facilities.",
+      href: "https://example.com/telemedicine", // Remplacez par un lien réel si disponible
+      image: "/service/ashkan-forouzani-ignxm3E1Rg4-unsplash.jpg",
+    },
+    {
+      id: "ehr",
+      title: "Electronic Health Records (EHR): Digitizing Patient Data",
+      description:
+        "Learn how EHR systems are transforming medical record-keeping, offering secure, accessible, and efficient management of patient data to enhance clinical decision-making and care coordination.",
+      href: "https://example.com/ehr", // Remplacez par un lien réel si disponible
+      image: "/service/olga-guryanova-tMFeatBSS4s-unsplash.jpg",
+    },
+    {
+      id: "ai-diagnostics",
+      title: "AI Diagnostics: Precision in Healthcare",
+      description:
+        "See how artificial intelligence is being leveraged to provide faster and more accurate diagnostics, helping healthcare professionals detect diseases earlier and improve patient outcomes.",
+      href: "https://example.com/ai-diagnostics", // Remplacez par un lien réel si disponible
+      image: "/service/patty-brito-Y-3Dt0us7e0-unsplash (1).jpg",
+    },
+    {
+      id: "wearables",
+      title: "Wearable Health Tech: Monitoring Made Simple",
+      description:
+        "Discover how wearable devices are empowering patients and doctors with real-time health monitoring, from heart rate tracking to chronic disease management, all in a user-friendly format.",
+      href: "https://example.com/wearables", // Remplacez par un lien réel si disponible
+      image: "/service/sander-sammy-38Un6Oi5beE-unsplash.jpg",
+    },
+    {
+      id: "pharmacy-automation",
+      title: "Pharmacy Automation: Streamlining Medication Delivery",
+      description:
+        "Explore how automation technologies are optimizing pharmacy operations, reducing errors, and ensuring timely delivery of medications to patients and healthcare providers.",
+      href: "https://example.com/pharmacy-automation", // Remplacez par un lien réel si disponible
+      image: "/service/cdc-XLhDvfz0sUM-unsplash.jpg",
+    },
+  ],
+};
 
-const ServiceSection = () => {
-  return (
-    <section 
-      className="py-16 px-6 flex flex-col items-center bg-cover bg-center relative text-white text-center"
-      style={{ backgroundImage: "url('/service/blue.png')" }}
-    >
-      <div className="relative z-10 max-w-4xl mx-auto">
-        <h2 className="text-4xl font-bold">Our Services</h2>
-        <p className="text-lg mt-3 max-w-2xl mx-auto opacity-90">
-          Your journey to better health starts with a simple, efficient, and patient-focused appointment booking process.
-        </p>
-      </div>
+function Gallery4Demo() {
+  return <Gallery4 {...demoData} />;
+}
 
-      {/* Section des services */}
-      <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-7xl px-10">
-        {services.map((service, index) => (
-          <motion.div
-            key={index}
-            whileHover={{ scale: 1.05 }}
-            className="relative p-6 rounded-lg shadow-lg min-h-[260px] flex flex-col justify-end transition-all bg-gray-300 text-black overflow-hidden group"
-          >
-            {/* Overlay au survol */}
-            <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 transition-opacity"></div>
-
-            {/* Contenu du service */}
-            <h3 className="text-lg font-semibold relative z-10 transition-all">
-              {service.name}
-            </h3>
-            {service.description && (
-              <p className="text-sm text-gray-600 mt-2 relative z-10 transition-all">
-                {service.description}
-              </p>
-            )}
-
-            {/* Bouton flèche visible au hover sur chaque service */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <button className="bg-white p-3 rounded-full shadow-md">
-                ➡
-              </button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Bouton View All Services aligné en bas à droite */}
-      <div className="mt-10 w-full max-w-7xl flex justify-end px-10">
-        <button className="border border-white text-white py-2 px-6 rounded-md text-sm tracking-wide hover:bg-white hover:text-blue-600 transition">
-          View All Services
-        </button>
-      </div>
-    </section>
-  );
-};export default ServiceSection;
+export { Gallery4Demo };

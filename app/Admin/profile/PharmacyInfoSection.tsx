@@ -16,11 +16,12 @@ interface PharmacyInfoSectionProps {
       nom: string;
       docPermis: File | null;
       docAutorisation: File | null;
+      pharmacie_image: File | null;
     };
   };
   onInputChange: (field: string, value: string | File | null) => void;
   onSubmit: (e: React.FormEvent) => void;
-  pharmacie?: { nom: string; docPermis: string; docAutorisation: string };
+  pharmacie?: { nom: string; docPermis: string; docAutorisation: string; pharmacie_image: string };
 }
 
 export function PharmacyInfoSection({
@@ -35,6 +36,7 @@ export function PharmacyInfoSection({
   const [dragOver, setDragOver] = useState<{ [key: string]: boolean }>({
     docPermis: false,
     docAutorisation: false,
+    pharmacie_image: false,
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -50,7 +52,14 @@ export function PharmacyInfoSection({
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>, field: string) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type === "application/pdf") {
+    if (field === "pharmacie_image") {
+      if (file && file.type.startsWith("image/")) {
+        onInputChange(`pharmacie.${field}`, file);
+        setErrors((prev) => ({ ...prev, [field]: "" }));
+      } else {
+        setErrors((prev) => ({ ...prev, [field]: "Seul les formats d'image sont acceptés" }));
+      }
+    } else if (file && file.type === "application/pdf") {
       onInputChange(`pharmacie.${field}`, file);
       setErrors((prev) => ({ ...prev, [field]: "" }));
     } else {
@@ -62,11 +71,17 @@ export function PharmacyInfoSection({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
     const file = e.target.files?.[0] || null;
     if (file) {
-      if (file.type === "application/pdf") {
+      if (field === "pharmacie_image" && file.type.startsWith("image/")) {
+        onInputChange(`pharmacie.${field}`, file);
+        setErrors((prev) => ({ ...prev, [field]: "" }));
+      } else if (field !== "pharmacie_image" && file.type === "application/pdf") {
         onInputChange(`pharmacie.${field}`, file);
         setErrors((prev) => ({ ...prev, [field]: "" }));
       } else {
-        setErrors((prev) => ({ ...prev, [field]: "Seul le format PDF est accepté" }));
+        setErrors((prev) => ({
+          ...prev,
+          [field]: field === "pharmacie_image" ? "Seul les formats d'image sont acceptés" : "Seul le format PDF est accepté",
+        }));
       }
     }
   };
@@ -99,6 +114,7 @@ export function PharmacyInfoSection({
         nom: formData.pharmacie.nom,
         docPermis: formData.pharmacie.docPermis ? formData.pharmacie.docPermis.name : pharmacie?.docPermis,
         docAutorisation: formData.pharmacie.docAutorisation ? formData.pharmacie.docAutorisation.name : pharmacie?.docAutorisation,
+        pharmacie_image: formData.pharmacie.pharmacie_image ? formData.pharmacie.pharmacie_image.name : pharmacie?.pharmacie_image,
       };
       pharmacieOptionnelleSchema.parse(dataToValidate);
       setErrors({});
@@ -209,7 +225,15 @@ export function PharmacyInfoSection({
               {errors.docPermis && <p className="text-red-600 text-sm mt-1">{errors.docPermis}</p>}
               {pharmacie?.docPermis && !formData.pharmacie.docPermis && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Current file: <a href={pharmacie.docPermis} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">View</a>
+                  Current file:{" "}
+                  <a
+                    href={pharmacie.docPermis}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    View
+                  </a>
                 </p>
               )}
             </div>
@@ -269,7 +293,83 @@ export function PharmacyInfoSection({
               {errors.docAutorisation && <p className="text-red-600 text-sm mt-1">{errors.docAutorisation}</p>}
               {pharmacie?.docAutorisation && !formData.pharmacie.docAutorisation && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Current file: <a href={pharmacie.docAutorisation} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">View</a>
+                  Current file:{" "}
+                  <a
+                    href={pharmacie.docAutorisation}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    View
+                  </a>
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="pharmacie.pharmacie_image">Pharmacy Image</Label>
+              <div
+                onDragOver={(e) => handleDragOver(e, "pharmacie_image")}
+                onDragLeave={() => handleDragLeave("pharmacie_image")}
+                onDrop={(e) => handleDrop(e, "pharmacie_image")}
+                className={`mt-1 p-4 border-2 border-dashed rounded-md text-center ${
+                  dragOver.pharmacie_image ? "border-blue-500 bg-blue-50" : "border-gray-300"
+                }`}
+              >
+                {formData.pharmacie.pharmacie_image ? (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600 truncate">{formData.pharmacie.pharmacie_image.name}</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCancelFile("pharmacie_image")}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : pharmacie?.pharmacie_image ? (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600">Current image</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCancelFile("pharmacie_image")}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Drag and drop image here or click to upload</p>
+                )}
+                <Input
+                  id="pharmacie.pharmacie_image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileChange(e, "pharmacie_image")}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="pharmacie.pharmacie_image"
+                  className="cursor-pointer text-blue-600 hover:underline mt-2 block"
+                >
+                  Choose File
+                </label>
+              </div>
+              {errors.pharmacie_image && <p className="text-red-600 text-sm mt-1">{errors.pharmacie_image}</p>}
+              {pharmacie?.pharmacie_image && !formData.pharmacie.pharmacie_image && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Current image:{" "}
+                  <a
+                    href={pharmacie.pharmacie_image}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    View
+                  </a>
                 </p>
               )}
             </div>
@@ -291,7 +391,12 @@ export function PharmacyInfoSection({
             <p className="text-sm text-gray-500 dark:text-gray-400">Permit Document</p>
             <p className="text-md text-gray-800 dark:text-white">
               {pharmacie?.docPermis ? (
-                <a href={pharmacie.docPermis} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                <a
+                  href={pharmacie.docPermis}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
                   View Permit
                 </a>
               ) : (
@@ -303,8 +408,30 @@ export function PharmacyInfoSection({
             <p className="text-sm text-gray-500 dark:text-gray-400">Authorization Document</p>
             <p className="text-md text-gray-800 dark:text-white">
               {pharmacie?.docAutorisation ? (
-                <a href={pharmacie.docAutorisation} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                <a
+                  href={pharmacie.docAutorisation}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
                   View Authorization
+                </a>
+              ) : (
+                "Not provided"
+              )}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Pharmacy Image</p>
+            <p className="text-md text-gray-800 dark:text-white">
+              {pharmacie?.pharmacie_image ? (
+                <a
+                  href={pharmacie.pharmacie_image}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  View Image
                 </a>
               ) : (
                 "Not provided"

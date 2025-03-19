@@ -28,53 +28,49 @@ interface Feature108Props {
 }
 
 const Feature108 = ({
-  badge = "shadcnblocks.com",
-  heading = "A Collection of Components Built With Shadcn & Tailwind",
-  description = "Join us to build flawless web solutions.",
+  heading = "Solutions numériques pour la santé et le médical avec Shadcn & Tailwind",
+  description = "Transformez les soins de santé avec des outils numériques innovants et accessibles.",
   tabs = [
     {
       value: "tab-1",
       icon: <Zap className="h-auto w-4 shrink-0" />,
-      label: "Boost Revenue",
+      label: "Efficacité des soins",
       content: {
-        badge: "Modern Tactics",
-        title: "Make your site a true standout.",
+        badge: "Technologie de pointe",
+        title: "Optimisez les soins aux patients.",
         description:
-          "Discover new web trends that help you craft sleek, highly functional sites that drive traffic and convert leads into customers.",
-        buttonText: "See Plans",
-        imageSrc:
-          "/trust/Group 8 (1).png",
-        imageAlt: "placeholder",
+          "Adoptez des solutions numériques modernes pour améliorer la gestion des soins, réduire les temps d'attente et offrir des diagnostics plus précis grâce à une technologie adaptée aux besoins de la santé.",
+        buttonText: "Découvrir les solutions",
+        imageSrc: "/trust/Group 8 (1).png",
+        imageAlt: "Solution pour les soins de santé",
       },
     },
     {
       value: "tab-2",
       icon: <Pointer className="h-auto w-4 shrink-0" />,
-      label: "Higher Engagement",
+      label: "Interaction patient",
       content: {
-        badge: "Expert Features",
-        title: "Boost your site with top-tier design.",
+        badge: "Expérience santé",
+        title: "Connectez-vous mieux avec vos patients.",
         description:
-          "Use stellar design to easily engage users and strengthen their loyalty. Create a seamless experience that keeps them coming back for more.",
-        buttonText: "See Tools",
-        imageSrc:
-          "/trust/Group 8 (1).png",
-        imageAlt: "placeholder",
+          "Proposez une interface intuitive pour faciliter la prise de rendez-vous, le suivi des traitements et la communication avec les professionnels de santé, renforçant ainsi la confiance et le bien-être des patients.",
+        buttonText: "Voir les outils",
+        imageSrc: "/trust/Group 8 (1).png",
+        imageAlt: "Interaction avec les patients",
       },
     },
     {
       value: "tab-3",
       icon: <Layout className="h-auto w-4 shrink-0" />,
-      label: "Stunning Layouts",
+      label: "Gestion de santé",
       content: {
-        badge: "Elite Solutions",
-        title: "Build an advanced web experience.",
+        badge: "Systèmes avancés",
+        title: "Simplifiez la gestion de la santé.",
         description:
-          "Lift your brand with modern tech that grabs attention and drives action. Create a digital experience that stands out from the crowd.",
-        buttonText: "See Options",
-        imageSrc:
-          "/trust/Group 8 (1).png",
-        imageAlt: "placeholder",
+          "Créez des plateformes performantes pour gérer les dossiers médicaux électroniques, coordonner les équipes soignantes et optimiser les opérations des pharmacies ou cliniques avec une approche centrée sur la santé.",
+        buttonText: "Explorer les options",
+        imageSrc: "/trust/Group 8 (1).png",
+        imageAlt: "Gestion des systèmes de santé",
       },
     },
   ],
@@ -83,7 +79,6 @@ const Feature108 = ({
     <section className="py-32">
       <div className="container mx-auto">
         <div className="flex flex-col items-center gap-4 text-center">
-          <Badge variant="outline">{badge}</Badge>
           <h1 className="max-w-2xl text-3xl font-semibold md:text-4xl">
             {heading}
           </h1>
